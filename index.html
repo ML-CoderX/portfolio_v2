@@ -3,8 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<noscript><style>.email-box button { display: none }</style></noscript>
+<meta name="theme-color" content="#f6f3ec">
+<noscript><style>.email-box button, .theme-switch { display: none }</style></noscript>
 <!--head-->
+<script>
+try {
+  if (localStorage.getItem('saad-theme') === 'night') {
+    document.documentElement.dataset.theme = 'night';
+    document.querySelector('meta[name="theme-color"]').content = '#171321';
+  }
+} catch {}
+</script>
 </head>
 <body>
 <div id="root"><!--app--></div>

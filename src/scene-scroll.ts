@@ -2,7 +2,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { chapterTransitions, scenes, type SceneId, type ScenePlayback, type TransitionConfig } from './scenes'
-import { prepareReach, prepareShot } from './shot-motion'
+import { preparePortal, prepareShot } from './shot-motion'
 
 const nativeScrollKeys = new Set(['Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' '])
 
@@ -16,7 +16,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
   const header = document.querySelector<HTMLElement>('.site-header')
   const artwork = document.querySelector('.workstation')
   const destination = document.getElementById(config.to)
-  const drawReach = prepareReach()
+  const drawPortal = preparePortal()
   const chapters = chapterTransitions.flatMap(chapter => {
     const shot = document.querySelector<HTMLElement>(`[data-chapter-shot="${chapter.shot}"]`)
     const section = document.getElementById(chapter.to)
@@ -57,7 +57,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
     if (playback.progress !== progress || next === config.from || active === config.from) playback.invalidate?.()
     playback.progress = progress
     const desktop = root.dataset.sceneMode === 'webgl'
-    if (desktop) drawReach(progress)
+    if (desktop) drawPortal(progress)
     root.toggleAttribute('data-ink-spill', progress > 0 && progress < 1)
     if (energy) energy.style.transform = `scaleX(${overall})`
     if (destination && root.dataset.sceneMode === 'css') reveal(destination, progress)
@@ -134,7 +134,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
       for (const entry of chapters) {
         const desktop = mode === 'webgl'
         entry.trigger = ScrollTrigger.create({
-          trigger: desktop ? entry.shot : entry.section,
+          trigger: desktop && entry.chapter.shot === 'eyes' ? entry.shot : entry.section,
           start: desktop ? entry.chapter.start : 'clamp(top 85%)',
           end: desktop ? `clamp(${entry.chapter.end})` : 'clamp(top 25%)',
           onUpdate: schedule,

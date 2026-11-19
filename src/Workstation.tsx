@@ -6,7 +6,7 @@ import {
   PerspectiveCamera, RedFormat, Scene, ShaderMaterial, SRGBColorSpace, TextureLoader, Vector2,
   Vector4, WebGLRenderTarget,
 } from 'three'
-import { reachEnd, reachTarget, type ScenePlayback, type TransitionConfig } from './scenes'
+import type { ScenePlayback, TransitionConfig } from './scenes'
 import { phase } from './shot-motion'
 type Callbacks = { onPaint: () => void; onFailure: () => void }
 
@@ -301,18 +301,12 @@ function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
       playback.orb.moved = pointer.current !== null
     }
     const progress = playback.progress
-    if (progress > 0 && progress < 1) {
-      const snap = phase(progress, 0, reachEnd * .88)
-      ink.orb.value.set(
-        MathUtils.lerp(playback.origin.x, reachTarget.x, snap),
-        MathUtils.lerp(playback.origin.y, reachTarget.y, snap),
-      )
-    }
+    if (progress > 0 && progress < 1) ink.orb.value.set(playback.origin.x, playback.origin.y)
     ink.orbSize.value = (heroVisible || (progress > 0 && progress < .47))
-      ? 17 / height * (1 - phase(progress, reachEnd, .47)) : 0
-    ink.progress.value = progress <= .5 ? phase(progress, reachEnd, .5) * .5
+      ? 17 / height * (1 - phase(progress, 0, .33)) : 0
+    ink.progress.value = progress <= .5 ? phase(progress, 0, .5) * .5
       : progress < .96 ? .5 + phase(progress, .5, .96) * .5 : 0
-    ink.origin.value.set(reachTarget.x, reachTarget.y)
+    ink.origin.value.set(playback.origin.x, playback.origin.y)
     ink.aspect.value = width / height
     gl.render(scene, camera)
     if (!painted.current) { painted.current = true; onPaint() }

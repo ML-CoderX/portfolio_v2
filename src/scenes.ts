@@ -2,7 +2,6 @@ import character from '../.scene-art/hero/character.webp'
 import inkSpill from '../.scene-art/hero/ink-spill.webp'
 import backdrop from '../.scene-art/work/backdrop.webp'
 import portalRing from '../.scene-art/work/portal-ring.webp'
-import portrait from '../.scene-art/about/portrait.webp'
 import eyesPanel from '../.scene-art/about/eyes-panel.webp'
 import shelf from '../.scene-art/toolkit/shelf.webp'
 import stage from '../.scene-art/contact/stage.webp'
@@ -17,10 +16,7 @@ export const scenes = {
     { name: 'work-backdrop', src: backdrop },
     { name: 'work-portal', src: portalRing },
   ] },
-  about: { chapter: '03', layers: [
-    { name: 'about-portrait', src: portrait },
-    { name: 'about-eyes', src: eyesPanel },
-  ] },
+  about: { chapter: '03', layers: [] },
   toolkit: { chapter: '04', layers: [{ name: 'toolkit-shelf', src: shelf }] },
   contact: { chapter: '05', layers: [{ name: 'contact-stage', src: stage }] },
 } satisfies Record<string, { chapter: string; layers: Layer[] }>
@@ -47,17 +43,13 @@ export const heroToWork: TransitionConfig = {
 }
 
 export const chapterTransitions = [
-  { from: 'work', to: 'about', shot: 'eyes', start: 'top 92%', end: 'bottom 46%' },
-  { from: 'about', to: 'toolkit', shot: 'pour', start: 'top 92%', end: 'bottom 46%' },
-  { from: 'toolkit', to: 'contact', shot: 'curtains', start: 'top 92%', end: 'bottom 46%' },
+  { from: 'work', to: 'about', shot: 'eyes', start: 'top 88%', end: 'bottom 33%' },
+  { from: 'toolkit', to: 'contact', shot: 'curtains', start: 'top 92%', end: 'top 25%' },
 ] as const satisfies readonly {
   from: SceneId; to: SceneId; shot: string; start: string; end: string
 }[]
 
-export const reachTarget = { x: .575, y: .225 }
-export const reachEnd = .36
-
-export const shotArtwork = { eyesPanel, portalRing, shelf, stage }
+export const shotArtwork = { eyesPanel, portalRing }
 
 export type ScenePlayback = {
   progress: number

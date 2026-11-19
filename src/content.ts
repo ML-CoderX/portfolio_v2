@@ -32,6 +32,7 @@ export const profile = {
 }
 
 export const copy = {
+  theme: { label: 'Night mode', day: 'Day', night: 'Night' },
   skip: 'Skip to content', nav: 'Main navigation', menu: 'Menu',
   ready: '[CH.01 // READY]', resume: 'Résumé', download: 'Download full dossier',
   github: 'GitHub', demo: 'Live demo', open: 'Open dossier', close: 'Close dossier',
@@ -56,8 +57,7 @@ export const copy = {
   work: { chapter: '[CHAPTER 01 // SELECTED WORK]', stamp: '★ DOKAN!', title: 'Notable runs &', accent: 'missions', intro: 'Four projects across mobile development and applied machine learning. Open a dossier to see how Cashlio and DocuAI work.' },
   about: {
     chapter: '[CHAPTER 02 // ORIGIN STORY]', stamp: '★ CHARACTER FILE', title: 'Character bio &', accent: 'philosophy',
-    alt: 'Manga-style character portrait with a pink visor',
-    stats: ['CLASS: DEVELOPER', 'SPEC: CS + AI', 'STATUS: ONLINE'],
+    alt: 'Manga-style portrait of a developer in glasses and a yellow-accented hoodie',
     log: 'DIALOGUE // FIRST-PERSON',
     quote: '“Hey! I’m Saad — a developer who treats code like sakuga animation: every frame and algorithm crafted with deliberate weight, rhythm, and precision.”',
     bio: 'I work across machine learning, web, and mobile development. I like following a project from the first experiment to an interface someone can actually use.',

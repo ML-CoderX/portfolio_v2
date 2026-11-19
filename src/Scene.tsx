@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { afterPaint } from './enhancements'
-import { ChapterShot, ReachShot } from './SceneShots'
+import { ChapterShot } from './SceneShots'
 import { chapterTransitions, scenes, shotArtwork, type SceneId, type SceneMode, type ScenePlayback, type TransitionConfig } from './scenes'
 
 const SceneCanvas = lazy(() => import('./Workstation').catch(() => ({ default: MissingCanvas })))
@@ -12,13 +12,11 @@ function MissingCanvas({ onFailure }: { onFailure: () => void }) {
 
 export function Scene({ id, className, children }: { id: SceneId; className: string; children: ReactNode }) {
   const entrance = chapterTransitions.find(transition => transition.to === id)
-  return <>
+  return <section id={id} className={className} aria-labelledby={id + '-title'} data-scene={id}>
     {entrance && <ChapterShot shot={entrance.shot} />}
-    <section id={id} className={className} aria-labelledby={id + '-title'} data-scene={id}>
-      {id !== 'hero' && id !== 'about' && <SceneArtwork id={id} />}
-      {children}
-    </section>
-  </>
+    {id !== 'hero' && id !== 'about' && <SceneArtwork id={id} />}
+    {children}
+  </section>
 }
 
 export function SceneArtwork({ id }: { id: SceneId }) {
@@ -102,7 +100,6 @@ export function Transition({ config }: { config: TransitionConfig }) {
 
   return <>
     <output hidden className="scene-debug" data-scene-debug aria-live="off" />
-    <ReachShot />
     <div className="portal-shot" data-portal-shot aria-hidden="true">
       <img src={shotArtwork.portalRing} alt="" loading="lazy" />
     </div>

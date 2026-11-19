@@ -4,6 +4,8 @@ import { ActionLink, Chip, ContactActions, LinkEffects, useSakuga } from './saku
 import { useEnhancements } from './enhancements'
 import { Scene, SceneArtwork, Transition } from './Scene'
 import { heroToWork } from './scenes'
+import portrait from '../.scene-art/about/portrait.webp'
+import { ThemeSwitch } from './ThemeSwitch'
 
 type Chapter = { chapter: string; stamp: string; title: string; accent: string; intro?: string }
 
@@ -20,7 +22,7 @@ function ChapterHeading({ chapter, id }: { chapter: Chapter; id: string }) {
   </div>
 }
 
-function Navigation() {
+function Navigation({ effectsReady }: { effectsReady: boolean }) {
   return <header className="site-header">
     <a className="skip" href="#main">{copy.skip}</a>
     <div className="energy" aria-hidden="true"><span data-energy /></div>
@@ -34,7 +36,8 @@ function Navigation() {
           <summary>{copy.menu}</summary>
           <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
         </details>
-        <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" />{copy.resume}</ActionLink>
+        <ThemeSwitch effectsReady={effectsReady} />
+        <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" /><span className="header-resume-label">{copy.resume}</span></ActionLink>
       </div>
     </div>
   </header>
@@ -157,9 +160,7 @@ function About() {
     <ChapterHeading chapter={a} id="about-title" />
     <div className="about-grid">
       <figure className="character panel" data-reveal>
-        <img loading="lazy" src="/bio.svg" width="200" height="200" alt={a.alt} />
-        <SceneArtwork id="about" />
-        <figcaption>{a.stats.map(stat => <span key={stat}>{stat}</span>)}</figcaption>
+        <img loading="lazy" decoding="async" src={portrait} width="640" height="853" alt={a.alt} />
       </figure>
       <div className="bio">
         <blockquote className="panel speech" data-reveal><small>{a.log}</small><p>{a.quote}</p></blockquote>
@@ -203,7 +204,7 @@ export function App() {
   const sakuga = useSakuga()
   useEnhancements()
   return <>
-    <Navigation />
+    <Navigation effectsReady={sakuga.button} />
     <LinkEffects ready={sakuga.button} />
     <main id="main" tabIndex={-1}><Hero /><Work sakuga={sakuga} /><About /><Toolkit /><Contact sakuga={sakuga} /></main>
     <Transition config={heroToWork} />

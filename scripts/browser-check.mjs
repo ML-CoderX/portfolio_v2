@@ -19,43 +19,48 @@ function screenPixel(screenshot, left, top) {
 
 async function verifyChapterShots(page, name, mode) {
   const shots = page.locator('[data-chapter-shot]')
+  assert.equal(await shots.count(), 2)
+  assert.equal(await page.locator('#about > [data-chapter-shot="eyes"]:first-child').count(), 1)
+  assert.equal(await page.locator('#contact > [data-chapter-shot="curtains"]').count(), 1)
   if (mode !== 'webgl') {
     assert.equal(await shots.filter({ visible: true }).count(), 0)
     return
   }
   async function atShot(shot, progress) {
     await page.evaluate(({ shot, progress }) => {
-      const rect = document.querySelector(`[data-chapter-shot="${shot}"]`).getBoundingClientRect()
-      const start = rect.top + scrollY - innerHeight * .92
-      const end = rect.bottom + scrollY - innerHeight * .46
+      const eyes = shot === 'eyes'
+      const rect = document.querySelector(eyes ? '[data-chapter-shot="eyes"]' : '#contact').getBoundingClientRect()
+      const start = rect.top + scrollY - innerHeight * (eyes ? .88 : .92)
+      const end = (eyes ? rect.bottom : rect.top) + scrollY - innerHeight * (eyes ? .33 : .25)
       scrollTo({ top: start + (end - start) * progress, behavior: 'instant' })
     }, { shot, progress })
-    const destination = { eyes: 'about', pour: 'toolkit', curtains: 'contact' }[shot]
+    const destination = shot === 'eyes' ? 'about' : 'contact'
     await page.waitForFunction(({ destination, progress }) => {
       const match = document.querySelector('[data-scene-debug]').value.match(new RegExp(destination + ' (\\d+)%$'))
       return match && Math.abs(Number(match[1]) - progress * 100) <= 2
     }, { destination, progress })
   }
-  const shutter = page.locator('.ink-shutter')
-  const jar = page.locator('[data-pour-jar]')
-  const stream = page.locator('[data-pour-stream]').first()
-  const curtain = page.locator('.curtain--left')
-  await atShot('eyes', .82)
-  assert.match(await shutter.evaluate(element => element.style.transform), /-110%/)
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/scene-eyes.png' })
-  await atShot('eyes', .1)
-  assert.match(await shutter.evaluate(element => element.style.transform), /translateY\(0%\)/)
-  await atShot('pour', .62)
-  assert.match(await jar.getAttribute('transform'), /rotate\(63\)/)
-  assert.equal(await stream.evaluate(element => getComputedStyle(element).opacity), '1')
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/scene-pour.png' })
-  await atShot('pour', .22)
-  assert.equal(await stream.evaluate(element => getComputedStyle(element).opacity), '0')
-  await atShot('curtains', .73)
-  assert.ok(await curtain.evaluate(element => parseFloat(element.style.transform.slice(11)) < -65))
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/scene-curtains.png' })
-  await atShot('curtains', .10)
-  assert.match(await curtain.evaluate(element => element.style.transform), /translateX\(0%\)/)
+  const gazes = () => page.locator('[data-eye-gaze]').evaluateAll(nodes => nodes.map(node => node.transform.baseVal.getItem(0).matrix.e))
+  await atShot('eyes', .4)
+  assert.ok((await gazes()).every(x => x > 15))
+  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/about-eyes-right.png' })
+  await atShot('eyes', .7)
+  assert.ok((await gazes()).every(x => x < -15))
+  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/about-eyes-left.png' })
+  await atShot('eyes', .4)
+  assert.ok((await gazes()).every(x => x > 15))
+  const curtains = page.locator('#contact > [data-chapter-shot="curtains"]')
+  const travel = () => curtains.evaluate(node => parseFloat(node.style.getPropertyValue('--curtain-travel')))
+  await page.evaluate(() => document.activeElement.blur())
+  await atShot('curtains', .72)
+  assert.ok(await travel() > 75)
+  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/contact-opening.png' })
+  await atShot('curtains', .55)
+  await page.locator('#contact input').evaluate(input => input.focus({ preventScroll: true }))
+  assert.equal(await curtains.evaluate(node => getComputedStyle(node).visibility), 'hidden')
+  await page.evaluate(() => document.activeElement.blur())
+  await atShot('curtains', .1)
+  assert.equal(await travel(), 0)
 }
 
 async function verifyScenes(page, name, touch) {
@@ -89,14 +94,10 @@ async function verifyScenes(page, name, touch) {
   if (name === 'chrome-mobile') assert.equal(mode, 'css')
   if (mode === 'webgl' || mode === 'css') {
     await atProgress(.2)
-    if (mode === 'webgl') {
-      const firstGrip = await page.locator('[data-reach-index]').getAttribute('transform')
-      await atProgress(.35)
-      assert.notEqual(await page.locator('[data-reach-index]').getAttribute('transform'), firstGrip)
-      assert.equal(await page.locator('[data-reach-shot]').evaluate(element => getComputedStyle(element).opacity), '1')
-      if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/scene-reach.png' })
-    }
+    assert.equal(await page.locator('[data-reach-shot]').count(), 0)
     await atProgress(.5)
+    assert.deepEqual(await page.locator('#work .chapter-heading').evaluate(element =>
+      [getComputedStyle(element).backgroundColor, getComputedStyle(element, '::before').content]), ['rgba(0, 0, 0, 0)', 'none'])
     if (name === 'chrome-desktop') {
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       const screenshot = await page.screenshot({ path: 'qa/hero-work-midpoint.png' })
@@ -120,9 +121,9 @@ async function verifyScenes(page, name, touch) {
       await page.waitForFunction(previous => document.documentElement.dataset.sceneMode === previous, mode)
     }
   }
-  await verifyChapterShots(page, name, mode)
-
-  if (!touch) {
+  if (touch) {
+    await verifyChapterShots(page, name, mode)
+  } else {
     await page.evaluate(() => document.activeElement.blur())
     await page.keyboard.press('Home')
     await page.waitForFunction(() => scrollY === 0)
@@ -163,6 +164,7 @@ async function verifyScenes(page, name, touch) {
     await page.waitForFunction(() => !location.hash && scrollY < 3)
     await page.goForward()
     await page.waitForFunction(() => location.hash === '#work' && scrollY > 0)
+    await verifyChapterShots(page, name, mode)
     if (mode === 'webgl') {
       await page.locator('.r3f-layer canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })))
       await page.waitForFunction(() => document.documentElement.dataset.sceneMode === 'static')
@@ -172,6 +174,27 @@ async function verifyScenes(page, name, touch) {
     await page.goto(new URL('?debug#contact', baseURL).href)
     await page.waitForFunction(() => document.documentElement.dataset.activeScene === 'contact')
   }
+}
+
+async function verifyTheme(page, name) {
+  await page.goto(baseURL)
+  const theme = page.getByRole('switch', { name: 'Night mode' })
+  await page.locator('.theme-toggle-art sakuga-toggle').waitFor()
+  assert.equal(await theme.getAttribute('aria-checked'), 'false')
+  assert.equal(await page.getByRole('switch').count(), 1)
+  await theme.press('Space')
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'night')
+  assert.equal(await theme.getAttribute('aria-checked'), 'true')
+  assert.equal(await page.locator('sakuga-toggle').evaluate(toggle => toggle.checked), true)
+  assert.equal(await page.locator('.project').first().evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(38, 32, 49)')
+  assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'), '#171321')
+  await page.reload()
+  await page.waitForFunction(() => document.querySelector('.theme-switch').getAttribute('aria-checked') === 'true')
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'night')
+  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/night-mode.png', fullPage: true })
+  await theme.click()
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'day')
+  assert.equal(await theme.getAttribute('aria-checked'), 'false')
 }
 
 async function interact(browser, name, options = {}) {
@@ -201,6 +224,8 @@ async function interact(browser, name, options = {}) {
   }))
   if (resources.paint) assert.ok(resources.enhancements.every(time => time > resources.paint))
   assert.equal(await page.locator('article').count(), 4)
+  assert.equal(await page.locator('#about figure.character > *').count(), 1)
+  assert.match(await page.locator('#about figure.character > img').getAttribute('src'), /portrait-/)
   assert.ok(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth), 'Horizontal overflow')
   assert.ok(responses.some(url => url.includes('/sakuga-vfx/button.js')))
   await page.screenshot({ path: 'qa/' + name + '.png', fullPage: true })
@@ -241,6 +266,7 @@ async function interact(browser, name, options = {}) {
   assert.equal(await page.evaluate(() => window.__copiedEmail), 'rsaadt3@gmail.com')
   assert.ok(await page.locator('.r3f-layer canvas, canvas.sakuga-fx').count() <= 1)
   await verifyScenes(page, name, options.hasTouch)
+  await verifyTheme(page, name)
   assert.deepEqual(errors, [])
   await page.close()
 }
@@ -263,6 +289,9 @@ async function fallbacks(browser) {
   assert.equal(await reduced.locator('canvas').count(), 0)
   assert.equal(await reduced.locator('[data-chapter-shot]').filter({ visible: true }).count(), 0)
   assert.ok(!requests.some(url => url.includes('/sakuga-vfx/') || url.includes('/Workstation-')))
+  await reduced.getByRole('switch', { name: 'Night mode' }).click()
+  assert.equal(await reduced.locator('html').getAttribute('data-theme'), 'night')
+  assert.equal(await reduced.locator('sakuga-toggle').count(), 0)
   await reduced.close()
 
   const blocked = await browser.newPage()
@@ -285,6 +314,8 @@ async function fallbacks(browser) {
   await blocked.locator('.r3f-layer').waitFor({ state: 'detached' })
   await blocked.getByRole('button', { name: 'Copy', exact: true }).click()
   await blocked.getByText('Email selected. Use your device’s copy command.').waitFor()
+  await blocked.getByRole('switch', { name: 'Night mode' }).click()
+  await blocked.waitForFunction(() => document.documentElement.dataset.theme === 'night')
   await blocked.locator('canvas').waitFor({ state: 'detached' })
   await blocked.close()
 }

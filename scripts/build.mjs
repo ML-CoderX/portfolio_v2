@@ -22,7 +22,7 @@ const schema = {
 }
 const head = [
   '<title>' + text(profile.title) + '</title>', tag('description', profile.description),
-  '<link rel="canonical" href="' + profile.url + '">', tag('theme-color', '#F6F3EC'),
+  '<link rel="canonical" href="' + profile.url + '">',
   '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
   '<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">',
   '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',

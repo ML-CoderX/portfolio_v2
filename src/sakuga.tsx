@@ -4,6 +4,7 @@ import { afterPaint } from './enhancements'
 
 type SakugaButton = HTMLElement & { done: () => void; impact: (origin?: HTMLElement) => void }
 type SakugaToast = HTMLElement & { show: (message: string) => void }
+export type SakugaToggle = HTMLElement & { checked: boolean; flip: () => void }
 type Particle = { dead?: boolean }
 type Props<T extends HTMLElement> = DetailedHTMLProps<HTMLAttributes<T>, T>
 declare module 'react' {
@@ -14,6 +15,7 @@ declare module 'react' {
       'sakuga-button': Props<SakugaButton> & { variant?: string }
       'sakuga-toast': Props<SakugaToast>
       'sakuga-tooltip': Props<HTMLElement> & { text: string; label: string }
+      'sakuga-toggle': Props<SakugaToggle> & { label: string }
     }
   }
 }
@@ -28,9 +30,9 @@ declare global {
   }
 }
 
-type Component = 'button' | 'toast' | 'tooltip'
+type Component = 'button' | 'toast' | 'tooltip' | 'toggle'
 const loads = new Map<Component, Promise<boolean>>()
-function load(component: Component) {
+export function loadSakuga(component: Component) {
   const previous = loads.get(component)
   if (previous) return previous
   const loading = new Promise<boolean>(resolve => {
@@ -61,10 +63,10 @@ export function useSakuga() {
         return
       }
       function enable(component: Component) {
-        void load('button').then(async button => {
+        void loadSakuga('button').then(async button => {
           if (current && !motion.matches) setReady(value => ({ ...value, button }))
           if (component === 'button' || motion.matches) return
-          const installed = await load(component)
+          const installed = await loadSakuga(component)
           if (current && !motion.matches) setReady(value => ({ ...value, [component]: installed }))
         })
       }

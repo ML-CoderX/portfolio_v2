@@ -81,10 +81,20 @@ let calm = reduce.matches; reduce.addEventListener?.('change', (e) => { calm = e
 // Effects are placed in page coordinates, so they scroll with their control.
 let g = null, dpr = 1;
 const front = { c: null, g: null, live: [], dirty: false }, layers = [front];
+let surfaceConsumer = null;
+// Share a detached drawing surface with the 3D renderer when it is available.
+function setSurfaceConsumer(consumer) {
+  surfaceConsumer = consumer;
+  if (!front.c) return;
+  if (consumer) {
+    front.c.remove();
+    consumer(front.c);
+  } else if (!front.c.isConnected) document.body.append(front.c);
+}
 function ensureFront() {
   if (front.c || !document.body) return;
   front.c = Object.assign(document.createElement('canvas'), { className: 'sakuga-fx' }); front.c.setAttribute('aria-hidden', 'true');
-  document.body.append(front.c); front.g = front.c.getContext('2d'); size();
+  if (!surfaceConsumer) document.body.append(front.c); front.g = front.c.getContext('2d'); size();
 }
 function size() { dpr = Math.min(1.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
 addEventListener('resize', size);
@@ -106,6 +116,7 @@ function tick(dt) {
     L.live = L.live.filter((p) => !p.dead && (p.t += dt) < p.life);
     for (const p of L.live) { g.save(); p.draw(p.t / p.life, p.t, dt); g.restore(); }
     L.dirty = L.live.length > 0;
+    if (L === front) surfaceConsumer?.(L.c);
   }
 }
 
@@ -300,7 +311,7 @@ const api = window.SakugaFX = {
   version: 1, paused: false,
   get P() { return P; }, get calm() { return calm; }, get now() { return now; },
   TAU, clamp, lerp, rnd, Spring,
-  advance, later, persist, blob, shape, get g() { return g; },
+  advance, later, persist, setSurfaceConsumer, blob, shape, get g() { return g; },
   puff, burst, shards, ring, splash, slash, lines, ticks, donut, wob, kira, sfx, hollow, dotted,
   at, esc, squashy, Base, define,
 };

@@ -83,8 +83,86 @@ p { line-height: 1.62; }
 .scroll-cue::before { content: ''; width: 28px; height: 3px; background: var(--ink); }
 .hero-art { position: relative; padding-inline: min(1vw, 10px); padding-bottom: 8px; }
 .workstation { position: relative; width: 100%; max-width: 520px; margin: 0 auto; aspect-ratio: 500 / 290; }
-.workstation img, .r3f-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.workstation img.model-painted { opacity: 0; }
+.workstation > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.r3f-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+.r3f-layer canvas { pointer-events: none; }
+[data-scene] { position: relative; }
+.scene-art, .scene-layer { position: absolute; inset: 0; pointer-events: none; }
+.scene-art { display: none; overflow: hidden; }
+.scene-layer { width: 100%; height: 100%; object-fit: cover; }
+:is([data-scene-mode="webgl"], [data-scene-mode="css"]) .scene-art { display: block; }
+:is([data-scene-mode="webgl"], [data-scene-mode="css"]) .workstation > img,
+:is([data-scene-mode="webgl"], [data-scene-mode="css"]) .character > img { opacity: 0; }
+[data-scene-mode="webgl"] :is(.hero-copy, .terminal, .art-stamp, .site-section > .frame) { z-index: 2; }
+[data-scene-mode="webgl"][data-ink-spill] #work .chapter-heading { position: relative; isolation: isolate; }
+[data-scene-mode="webgl"][data-ink-spill] :is(.hero-copy, #work .chapter-heading)::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  background: var(--paper);
+}
+.hero-character { object-fit: contain; }
+[data-scene-mode="webgl"] .hero-character { opacity: .6; mask-image: linear-gradient(transparent 12%, #0008 46%, black 76%); }
+.work-backdrop { opacity: .27; object-position: center top; }
+.work-portal { inset: 14px 40% auto auto; width: clamp(100px, 11vw, 155px); height: auto; aspect-ratio: 1; border-radius: 50%; mix-blend-mode: multiply; opacity: .7; }
+[data-scene-mode="css"] :is(#work, #about, #toolkit, #contact) .scene-art {
+  clip-path: inset(0 0 var(--scene-clip, 0%) 0);
+  opacity: var(--scene-fade, 1);
+}
+.character { position: relative; }
+.character .scene-art { inset: 12px 12px 55px; }
+.about-portrait { object-fit: contain; object-position: center top; }
+.about-eyes { inset: auto 11% 2% 11%; width: 78%; height: 28%; object-fit: contain; object-position: center bottom; }
+.character figcaption { position: relative; }
+.toolkit-shelf { inset: 0 0 0 35%; width: 65%; object-fit: contain; object-position: right top; opacity: .32; }
+.contact-stage { opacity: .64; object-position: center top; }
+.reach-shot, .portal-shot, .chapter-shot { display: none; pointer-events: none; }
+[data-scene-mode="webgl"] :is(.reach-shot, .portal-shot, .chapter-shot) { display: block; }
+.reach-shot {
+  position: fixed; z-index: 1; width: min(57vw, 740px); aspect-ratio: 680 / 460; opacity: 0;
+  transform: translate(-27.94%, -40%); overflow: visible;
+}
+.reach-drawing { display: block; width: 100%; height: 100%; overflow: visible; }
+.portal-shot {
+  position: fixed; z-index: 1; top: 43%; left: 64%; width: min(35vw, 480px);
+  aspect-ratio: 1; opacity: 0; mix-blend-mode: multiply;
+}
+.portal-shot img {
+  width: 100%; height: 100%; object-fit: contain;
+  mask-image: radial-gradient(farthest-side, #000 95%, transparent);
+}
+.chapter-shot {
+  position: relative; isolation: isolate; contain: paint; overflow: hidden;
+  height: clamp(285px, 56vh, 560px); border-bottom: var(--rule); background: var(--ink);
+}
+.eye-panel { position: absolute; inset: 0; display: grid; place-items: center; background: var(--pink-paper); }
+.eye-panel img {
+  width: min(89%, 1220px); max-height: 82%; object-fit: cover; border: var(--rule);
+  box-shadow: 12px 12px var(--ink);
+}
+.ink-shutter {
+  position: absolute; inset: 0 0 -14%; background: var(--ink);
+  background-image: repeating-linear-gradient(87deg, transparent 0 16px, #ff2e8840 17px 18px, transparent 19px 30px);
+  clip-path: polygon(0 0,100% 0,100% 84%,97% 89%,95% 85%,93% 95%,91% 86%,88% 99%,85% 88%,82% 91%,78% 80%,76% 89%,73% 93%,70% 85%,67% 100%,64% 92%,61% 96%,58% 89%,55% 92%,52% 85%,49% 91%,46% 82%,43% 98%,40% 96%,37% 86%,34% 94%,31% 86%,28% 91%,25% 87%,22% 99%,20% 90%,17% 100%,14% 86%,11% 93%,8% 84%,5% 98%,3% 89%,0 94%);
+}
+.chapter-shot--pour { background: var(--paper); }
+.pour-shelf {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: 50% 39%; opacity: .22;
+  mask-image: linear-gradient(black 14%, transparent 92%);
+}
+.pour-drawing { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chapter-shot--curtains { background: var(--paper); }
+.stage-floor {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 42%;
+}
+.curtain { position: absolute; inset: 0 50% 0 0; overflow: hidden; }
+.curtain--right { inset: 0 0 0 50%; }
+.curtain svg { width: 100%; height: 100%; display: block; }
+.curtain--right svg { transform: scaleX(-1); }
+.scene-debug { position: fixed; right: 12px; bottom: 12px; z-index: 35; padding: 7px 9px; background: var(--yellow); color: var(--ink); border: var(--rule); font: 700 12px/1.3 var(--mono); pointer-events: none; }
+.scene-debug[hidden] { display: none; }
 .art-stamp { position: absolute; z-index: 2; right: 1%; top: -14px; transform: rotate(6deg); }
 .art-stamp.secondary { top: auto; bottom: -9px; left: 3%; right: auto; background: var(--yellow); transform: rotate(-5deg); }
 .terminal { position: relative; margin: -10% auto 0; width: 94%; max-width: 460px; border: var(--rule); background: white; padding: 8px; box-shadow: 6px 6px var(--ink); }
@@ -144,7 +222,7 @@ sakuga-tooltip[data-below]::part(tip) { bottom: auto; top: calc(100% + 16px); tr
 sakuga-tooltip[data-below]::part(tip)::after, sakuga-tooltip[data-below]::part(tip)::before { display: none; }
 .about-grid, .toolkit-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(20px, 3vw, 32px); align-items: start; }
 .character { display: grid; min-height: 300px; justify-items: center; background-color: var(--pink-paper); background-image: radial-gradient(#a34b6b54 1px,transparent 1px); background-size: 6px 6px; padding: 18px; }
-.character img { width: min(100%,220px); height: auto; }
+.character > img { width: min(100%,220px); height: auto; }
 .character figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
 .character figcaption span, .timeline small, .timeline b { background: var(--ink); color: white; padding: 4px 6px; font: 700 12px/1.3 var(--mono); }
 .speech { position: relative; padding: 14px 18px; margin-bottom: 18px; }
@@ -206,7 +284,12 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
   .project { transition: transform .16s ease-out, box-shadow .16s ease-out; }
   .project:hover { transform: translate(-2px,-2px) rotate(-.35deg); box-shadow: 7px 8px var(--ink); }
 }
-@media (max-width: 1000px) { .ready { display: none; } }
+@media (max-width: 1000px) {
+  .ready { display: none; }
+  .ready[data-chapter] { display: inline-block; padding-inline: 4px; font-size: 0; white-space: nowrap; }
+  .ready[data-chapter]::after { content: attr(data-chapter); font-size: 12px; }
+  .brand-group { gap: 8px; }
+}
 @media (max-width: 767px) {
   :root { scroll-padding-top: 74px; }
   .header-row { min-height: 61px; }
@@ -217,12 +300,15 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
   .mobile-nav nav a { padding: 7px; font-weight: 800; }
   .hero-grid, .about-grid, .toolkit-grid { grid-template-columns: 1fr; }
   .hero-art { max-width: 490px; width: 100%; margin: 5px auto; }
+  .work-portal { right: 4%; top: 3%; opacity: .4; }
+  .toolkit-shelf { inset: 0; width: 100%; }
   .chapter-heading { display: block; }
   .chapter-heading p { margin-top: 6px; }
   .facets { grid-template-columns: 1fr; }
   .sfx-stamp { left: calc(100% + 6px); top: 2px; padding-inline: 5px; }
 }
 @media (max-width: 360px) {
+  .header-row { gap: 5px; padding-inline: 8px; }
   .hero-badge { gap: 4px; padding-inline: 5px; }
   .hero h1 { font-size: 60px; }
   .sfx-stamp { left: calc(100% + 2px); }

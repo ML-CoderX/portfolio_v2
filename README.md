@@ -22,6 +22,8 @@ The build renders the shared React page into dist/index.html, then generates the
 - Place your résumé at public/Saad_Resume.pdf. The build supplies a valid placeholder PDF when that file is absent.
 - The page components are in src/App.tsx. The Stitch Tailwind tokens are in tailwind.config.cjs, and layout and motion styles are in src/style.css.
 - The workstation lives in src/Workstation.tsx and its fallback is public/workstation.svg. The character illustration came from the Stitch export.
+- The chapter sequence is configured in src/scenes.ts. GSAP ScrollTrigger maps native scroll to shot progress in src/scene-scroll.ts. The illustrated reach and pour are SVGs in src/SceneShots.tsx, posed by src/shot-motion.ts. Each shot reverses with the scroll position. Use `?debug` to see chapter and transition progress.
+- Fine-pointer desktops with WebGL get the full sequence. Touch screens get clipped chapter art reveals. Reduced motion and unavailable WebGL keep the stacked reading layout.
 - src/enhancements.ts and src/motion.ts handle reading progress, pointer trails, stamps, and scroll animation. The 3D view and Sakuga scripts load after initial rendering. Reduced motion keeps the hero artwork static.
 - The shadcn registry files are in public/sakuga-vfx with their MIT license. Local changes share the front canvas for bursts and pointer trails, suspend the shared clock while hidden, let CTA effects originate at anchors, and reposition tooltips near viewport edges.
 

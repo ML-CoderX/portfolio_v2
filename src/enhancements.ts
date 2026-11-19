@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 export function afterPaint(callback: () => void, delay = 500) {
   let timer = 0
@@ -20,53 +20,9 @@ export function afterPaint(callback: () => void, delay = 500) {
   return () => { paints?.disconnect(); cancelAnimationFrame(frame); clearTimeout(timer) }
 }
 
-export function useWorkstation() {
-  const [active, setActive] = useState(false)
-  useEffect(() => {
-    const motion = matchMedia('(prefers-reduced-motion: reduce)')
-    const touch = matchMedia('(pointer: coarse)')
-    const hero = document.getElementById('hero')
-    let cancel = () => {}
-    function sync() {
-      cancel()
-      if (motion.matches) setActive(false)
-      else if ('WebGL2RenderingContext' in window && hero) {
-        const enable = () => {
-          if (document.hidden || hero.getBoundingClientRect().bottom < 80) return
-          cancel()
-          setActive(true)
-        }
-        const observer = new IntersectionObserver(([entry]) => {
-          if (!entry.isIntersecting) return
-          clearTimeout(timer)
-          timer = window.setTimeout(enable, touch.matches ? 6500 : 1100)
-        }, { threshold: .25 })
-        let timer = 0
-        const art = hero.querySelector('.hero-art')
-        const painted = afterPaint(() => {
-          observer.observe(hero)
-          art?.addEventListener('pointerdown', enable)
-        }, 0)
-        cancel = () => {
-          painted()
-          clearTimeout(timer)
-          observer.disconnect()
-          art?.removeEventListener('pointerdown', enable)
-        }
-      }
-    }
-    sync()
-    motion.addEventListener('change', sync)
-    return () => { cancel(); motion.removeEventListener('change', sync) }
-  }, [])
-  return [active, setActive] as const
-}
-
 export function useEnhancements() {
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
-    const progress = document.querySelector<HTMLElement>('[data-energy]')
-    let scrollFrame = 0
     let pointerFrame = 0
     let last = 0
     let cleanup: (() => void) | undefined
@@ -75,13 +31,6 @@ export function useEnhancements() {
     let stamp: HTMLElement | undefined
     let stampTimer = 0
     const particles: { x: number; y: number; born: number }[] = []
-    function updateProgress() {
-      scrollFrame = 0
-      const max = document.documentElement.scrollHeight - innerHeight
-      if (progress) progress.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0) + ')'
-    }
-    function scroll() { if (!scrollFrame) scrollFrame = requestAnimationFrame(updateProgress) }
-
     function pointer(event: PointerEvent) {
       if (media.matches || document.hidden || event.pointerType !== 'mouse' || pointerFrame) return
       const now = performance.now()
@@ -156,11 +105,7 @@ export function useEnhancements() {
         stopAnimations?.()
       }
     }
-    updateProgress()
     motion()
-    const size = new ResizeObserver(scroll)
-    size.observe(document.body)
-    window.addEventListener('scroll', scroll, { passive: true })
     window.addEventListener('pointermove', pointer, { passive: true })
     document.addEventListener('click', click)
     media.addEventListener('change', motion)
@@ -170,10 +115,7 @@ export function useEnhancements() {
       if (trail) trail.dead = true
       stamp?.remove()
       clearTimeout(stampTimer)
-      size.disconnect()
-      cancelAnimationFrame(scrollFrame)
       cancelAnimationFrame(pointerFrame)
-      window.removeEventListener('scroll', scroll)
       window.removeEventListener('pointermove', pointer)
       document.removeEventListener('click', click)
       media.removeEventListener('change', motion)

@@ -23,6 +23,7 @@ declare global {
       persist: (draw: () => void) => Particle
       g: CanvasRenderingContext2D
       calm: boolean
+      setSurfaceConsumer: (consumer: ((canvas: HTMLCanvasElement) => void) | null) => void
     }
   }
 }
@@ -35,7 +36,11 @@ function load(component: Component) {
   const loading = new Promise<boolean>(resolve => {
     const script = document.createElement('script')
     script.src = '/sakuga-vfx/' + component + '.js'
-    script.onload = () => resolve(!!customElements.get('sakuga-' + component))
+    script.onload = () => {
+      const installed = !!customElements.get('sakuga-' + component)
+      if (installed) window.dispatchEvent(new Event('sakuga:ready'))
+      resolve(installed)
+    }
     script.onerror = () => resolve(false)
     document.head.append(script)
   })

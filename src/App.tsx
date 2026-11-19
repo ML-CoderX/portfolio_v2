@@ -1,9 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { copy, profile, projects, timeline, toolkit, type Project } from './content'
 import { ActionLink, Chip, ContactActions, LinkEffects, useSakuga } from './sakuga'
-import { useEnhancements, useWorkstation } from './enhancements'
+import { useEnhancements } from './enhancements'
+import { Scene, SceneArtwork, Transition } from './Scene'
+import { heroToWork } from './scenes'
 
-const Workstation = lazy(() => import('./Workstation').catch(() => ({ default: () => null })))
 type Chapter = { chapter: string; stamp: string; title: string; accent: string; intro?: string }
 
 function Icon({ name }: { name: string }) {
@@ -24,7 +25,7 @@ function Navigation() {
     <a className="skip" href="#main">{copy.skip}</a>
     <div className="energy" aria-hidden="true"><span data-energy /></div>
     <div className="header-row">
-      <div className="brand-group"><a className="brand" href="#hero">{profile.name}<i /></a><span className="ready">{copy.ready}</span></div>
+      <div className="brand-group"><a className="brand" href="#hero">{profile.name}<i /></a><span className="ready" data-active-chapter>{copy.ready}</span></div>
       <nav aria-label={copy.nav} className="desktop-nav">{copy.navLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="header-actions">
         <details className="mobile-nav" onClick={event => {
@@ -40,12 +41,8 @@ function Navigation() {
 }
 
 function Hero() {
-  const [active, setActive] = useWorkstation()
-  const [painted, setPainted] = useState(false)
-  const onPaint = useCallback(() => setPainted(true), [])
-  const onFailure = useCallback(() => { setPainted(false); setActive(false) }, [setActive])
   const h = copy.hero
-  return <section id="hero" className="hero section-tone" aria-labelledby="hero-title">
+  return <Scene id="hero" className="hero section-tone">
     <div className="speed-lines" aria-hidden="true" />
     <div className="frame hero-grid">
       <div className="hero-copy">
@@ -66,8 +63,8 @@ function Hero() {
       <div className="hero-art">
         <span className="art-stamp" data-stamp>{h.badge}</span>
         <figure className="workstation">
-          <img src="/workstation.svg" alt={h.alt} width="500" height="290" fetchPriority="high" className={active && painted ? 'model-painted' : ''} />
-          {active && <Suspense fallback={null}><Workstation onPaint={onPaint} onFailure={onFailure} /></Suspense>}
+          <img src="/workstation.svg" alt={h.alt} width="500" height="290" fetchPriority="high" />
+          <SceneArtwork id="hero" />
         </figure>
         <div className="terminal">
           <div className="terminal-bar"><span aria-hidden="true"><i /><i /><i /></span>{h.terminal}</div>
@@ -79,7 +76,7 @@ function Hero() {
         <span className="art-stamp secondary" data-stamp>{h.badgeTwo}</span>
       </div>
     </div>
-  </section>
+  </Scene>
 }
 
 function DossierBody({ project }: { project: Project }) {
@@ -132,7 +129,7 @@ function Dossier({ project }: { project: Project }) {
 }
 
 function Work({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
-  return <section id="work" className="site-section work-section" aria-labelledby="work-title">
+  return <Scene id="work" className="site-section work-section">
     <div className="frame">
       <ChapterHeading chapter={copy.work} id="work-title" />
       <div className="project-grid">
@@ -151,16 +148,17 @@ function Work({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
         </article>)}
       </div>
     </div>
-  </section>
+  </Scene>
 }
 
 function About() {
   const a = copy.about
-  return <section id="about" className="site-section section-tone" aria-labelledby="about-title"><div className="frame">
+  return <Scene id="about" className="site-section section-tone"><div className="frame">
     <ChapterHeading chapter={a} id="about-title" />
     <div className="about-grid">
       <figure className="character panel" data-reveal>
         <img loading="lazy" src="/bio.svg" width="200" height="200" alt={a.alt} />
+        <SceneArtwork id="about" />
         <figcaption>{a.stats.map(stat => <span key={stat}>{stat}</span>)}</figcaption>
       </figure>
       <div className="bio">
@@ -169,11 +167,11 @@ function About() {
         <ul className="facets">{a.facets.map(([title, detail], index) => <li key={title} className="panel" data-reveal><span aria-hidden="true">0{index + 1}</span><h3>{title}</h3><p>{detail}</p></li>)}</ul>
       </div>
     </div>
-  </div></section>
+  </div></Scene>
 }
 
 function Toolkit() {
-  return <section id="toolkit" className="site-section toolkit-section" aria-labelledby="toolkit-title"><div className="frame">
+  return <Scene id="toolkit" className="site-section toolkit-section"><div className="frame">
     <ChapterHeading chapter={copy.toolkit} id="toolkit-title" />
     <div className="toolkit-grid">
       <div className="timeline panel"><h3>{copy.toolkit.log}</h3><ol>{timeline.map(milestone => <li key={milestone.title} data-reveal>
@@ -183,12 +181,12 @@ function Toolkit() {
         <h3>{group.name}</h3><ul>{group.items.map(item => <li key={item}>{item}<div className="exp-track" aria-hidden="true"><span data-exp /></div></li>)}</ul>
       </section>)}</div>
     </div>
-  </div></section>
+  </div></Scene>
 }
 
 function Contact({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
   const c = copy.contact
-  return <section id="contact" className="contact site-section section-tone" aria-labelledby="contact-title"><div className="frame">
+  return <Scene id="contact" className="contact site-section section-tone"><div className="frame">
     <div className="chapter-pill">{c.chapter} <b>{c.stamp}</b></div>
     <div className="contact-card panel">
       <span className="contact-stamp">{c.badge}</span>
@@ -198,7 +196,7 @@ function Contact({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
       <div className="action-row">{profile.socials.map(link => <a className="comic-action" key={link.href} href={link.href}>{link.label}</a>)}
         <ActionLink appearance="pink" href={profile.resume} sfx={copy.effects.download} download><Icon name="download" />{copy.download}</ActionLink></div>
     </div>
-  </div></section>
+  </div></Scene>
 }
 
 export function App() {
@@ -208,6 +206,7 @@ export function App() {
     <Navigation />
     <LinkEffects ready={sakuga.button} />
     <main id="main" tabIndex={-1}><Hero /><Work sakuga={sakuga} /><About /><Toolkit /><Contact sakuga={sakuga} /></main>
+    <Transition config={heroToWork} />
     <footer className="footer"><div className="frame"><p>{copy.footer}</p><nav aria-label={copy.contact.title}>{profile.socials.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href={'mailto:' + profile.email}>{copy.email}</a></nav><a className="comic-action" href="#hero"><Icon name="arrow_upward" />{copy.top}</a></div></footer>
   </>
 }

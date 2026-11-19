@@ -137,7 +137,6 @@ export function useEnhancements() {
         return
       }
       const hero = document.getElementById('hero')
-      const work = document.getElementById('work')
       const cancelEntrance = afterPaint(() => {
         if (scrollY < 100) hero?.classList.add('hero-entrance')
       }, 70)
@@ -149,7 +148,7 @@ export function useEnhancements() {
           if (run === generation) stopAnimations = animatePage()
         }).catch(() => {})
       }, { rootMargin: '240px 0px' })
-      if (work) observer.observe(work)
+      for (const section of document.querySelectorAll('.site-section')) observer.observe(section)
       cleanup = () => {
         cancelEntrance()
         hero?.classList.remove('hero-entrance')

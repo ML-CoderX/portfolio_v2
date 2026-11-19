@@ -107,7 +107,11 @@ async function fallbacks(browser) {
     document.execCommand = () => false
   })
   await blocked.goto(baseURL)
+  if (await blocked.evaluate(() => 'WebGL2RenderingContext' in window)) {
+    await blocked.waitForFunction(() => performance.getEntriesByType('resource').some(entry => entry.name.includes('/Workstation-')))
+  }
   await blocked.locator('.workstation img').waitFor()
+  await blocked.locator('.r3f-layer').waitFor({ state: 'detached' })
   await blocked.getByRole('button', { name: 'Copy', exact: true }).click()
   await blocked.getByText('Email selected. Use your device’s copy command.').waitFor()
   assert.equal(await blocked.locator('canvas').count(), 0)

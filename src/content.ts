@@ -19,7 +19,7 @@ export const profile = {
   last: 'AR',
   role: 'Machine Learning & Web Developer',
   url: 'https://saadar.dev/',
-  email: 'saad.ar.dev@gmail.com',
+  email: 'rsaadt3@gmail.com',
   resume: '/Saad_Resume.pdf',
   title: 'Saad AR // Cel-Shaded Dev Portfolio',
   description: 'Explore Saad AR’s machine learning, web, and mobile projects in a cel-shaded portfolio. See selected work, technical dossiers, and ways to get in touch.',

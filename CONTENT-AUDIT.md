@@ -23,6 +23,6 @@ The Cashlio export described a ledger worker and DocuAI described OCR and FHIR n
 
 - All four project GitHub links use the repositories published on the current portfolio. The laptop demo uses its verified Streamlit deployment.
 - Cashlio’s sandbox and DocuAI’s API REPL are omitted pending hosted endpoints. The IPL demo is recorded as a source TODO because its published deployment timed out.
-- Contact and footer GitHub and LinkedIn use the published profiles. The unresolved X profile is omitted. The email link uses `mailto:saad.ar.dev@gmail.com`.
+- Contact and footer GitHub and LinkedIn use the published profiles. The unresolved X profile is omitted. The email link uses `mailto:rsaadt3@gmail.com`.
 - The brand and back-to-top controls use `#hero`. The Contact navigation item points to the real `#contact` section.
 - Both résumé actions use `/Saad_Resume.pdf`. The build supplies a valid placeholder until the real résumé is added.

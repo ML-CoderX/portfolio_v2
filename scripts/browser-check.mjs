@@ -69,7 +69,7 @@ async function interact(browser, name, options = {}) {
   await page.waitForFunction(() => !!customElements.get('sakuga-toast'))
   await page.locator('sakuga-button').getByRole('button', { name: 'Copy', exact: true }).click()
   await page.getByText('Email copied!', { exact: true }).waitFor()
-  assert.equal(await page.evaluate(() => window.__copiedEmail), 'saad.ar.dev@gmail.com')
+  assert.equal(await page.evaluate(() => window.__copiedEmail), 'rsaadt3@gmail.com')
   assert.ok(await page.locator('canvas.sakuga-fx').count() <= 1)
   assert.deepEqual(errors, [])
   await page.close()

@@ -66,7 +66,7 @@ p { line-height: 1.62; }
 .hero { position: relative; overflow: clip; border-bottom: var(--rule); padding-block: clamp(48px, 5vw, 76px); }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: center; gap: clamp(24px, 4vw, 64px); }
 .hero-copy { position: relative; }
-.speed-lines { position: absolute; inset: 0; opacity: .18; pointer-events: none; background: repeating-conic-gradient(from 4deg at 55% 46%, transparent 0 8deg, #524a65 8deg 8.15deg, transparent 8.15deg 15deg); mask-image: radial-gradient(ellipse,transparent 34%,black 100%); }
+.speed-lines { position: absolute; inset: 0; opacity: .18; pointer-events: none; background: url('/speed-lines.svg') center / 100% 100% no-repeat; }
 .hero-badge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .hero-badge i { margin: 0; }
 .hero-badge b { color: #b6005b; }
@@ -136,8 +136,10 @@ p { line-height: 1.62; }
 .chip { display: inline-block; min-height: 26px; border: 2px solid var(--ink); background: white; color: var(--ink); padding: 3px 6px; font: 700 12px/1.3 var(--mono); }
 sakuga-tooltip.chip { padding: 0; border: 0; margin: 0; vertical-align: top; }
 sakuga-tooltip::part(button) { display: inline-flex; width: auto; height: 26px; white-space: nowrap; background: white; color: var(--ink); border: 2px solid var(--ink); padding: 3px 6px; border-radius: 0; box-shadow: none; font: 700 12px/1.3 var(--mono); }
-sakuga-tooltip::part(tip) { z-index: 1; font: 700 12px/1.35 var(--mono); border-radius: 0; padding: 8px; }
+sakuga-tooltip::part(tip) { z-index: 1; font: 700 12px/1.35 var(--mono); border-radius: 0; padding: 8px; visibility: hidden; }
 sakuga-tooltip[data-open] { position: relative; z-index: 2; }
+sakuga-tooltip[data-open]::part(tip) { transform: none !important; visibility: visible; animation: tip-snap .21s cubic-bezier(.22,1,.36,1) both; }
+@keyframes tip-snap { 0% { scale: .88; } 68% { scale: 1.04; } 100% { scale: 1; } }
 sakuga-tooltip[data-below]::part(tip) { bottom: auto; top: calc(100% + 16px); transform-origin: center top; }
 sakuga-tooltip[data-below]::part(tip)::after, sakuga-tooltip[data-below]::part(tip)::before { display: none; }
 .about-grid, .toolkit-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(20px, 3vw, 32px); align-items: start; }

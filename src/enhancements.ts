@@ -147,7 +147,7 @@ export function useEnhancements() {
         void import('./motion').then(({ animatePage }) => {
           if (run === generation) stopAnimations = animatePage()
         }).catch(() => {})
-      }, { rootMargin: '240px 0px' })
+      }, { rootMargin: matchMedia('(pointer: coarse)').matches ? '0px' : '240px 0px' })
       for (const section of document.querySelectorAll('.site-section')) observer.observe(section)
       cleanup = () => {
         cancelEntrance()

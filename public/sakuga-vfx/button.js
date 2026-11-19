@@ -35,17 +35,17 @@ class SakugaButton extends fx.Base {
       this.sq = squashy(b, { low: 0.72, wide: 0.3 });
       b.addEventListener('click', () => { this.sq.s.x = Math.min(this.sq.s.x, 0.8); this.sq.s.v += 4; const c = at(b, 1, 0); ticks(c.x - 8, c.y - 4, { dir: -1.05, n: 3, r: 5, len: 17, fan: 0.36, life: 0.5 }); });
     } else {
-      this.sq = squashy(b, { low: 0.5, wide: 0.24 }); this.back = this.backLayer();
+      this.sq = squashy(b, { low: 0.5, wide: 0.24 }); 
       b.addEventListener('pointerdown', () => { if (b.disabled) return; const c = at(b); ticks(c.x, c.y - c.h / 2 - 6, { dir: -Math.PI / 2, n: 3, r: 4, len: 14, fan: 0.5 }); wob(c.x - c.w / 2 - 6, c.y, { dir: -1, r: 10, life: 0.3 }); wob(c.x + c.w / 2 + 6, c.y, { dir: 1, r: 10, life: 0.3 }); lines(c.x, c.y + c.h / 2 + 10, { n: 3, dir: 0, len: 16, spread: 0.1, life: 0.25 }); });
       b.addEventListener('click', () => this.impact());
     }
     b.addEventListener('click', () => { if (this.getAttribute('type') === 'submit') this.closest('form')?.requestSubmit(); });
   }
   // the impact: what a click does. You can call it yourself.
-  impact() {
-    const b = this.b, sq = this.sq, c = at(b), n = ++this.seq; this.ok.to = 0; this.ok.x = 0;
+  impact(origin) {
+    const b = this.b, sq = this.sq, c = at(origin || b), n = ++this.seq; this.ok.to = 0; this.ok.x = 0;
     sq.s.x = Math.min(sq.s.x, 0.6); sq.pop.x = 1.24; sq.tilt.x = -5; b.classList.add('inv'); later(190, () => b.classList.remove('inv'));
-    burst(c.x, c.y, { r: 98, spikes: 17, life: 0.48, layer: this.back }); shards(c.x, c.y, { n: 11, speed: 260, size: 9, life: 0.95, arc: 6.28, grav: 300 });
+    burst(c.x, c.y, { r: 98, spikes: 17, life: 0.48 }); shards(c.x, c.y, { n: 11, speed: 260, size: 9, life: 0.95, arc: 6.28, grav: 300 });
       for (const [dx, dy] of [[-1, -0.5], [1, -1], [-1, 0.9], [1, 1]]) puff(c.x + dx * (c.w / 2 + 6), c.y + dy * 26, { size: rnd(12, 16), n: 5, vx: dx * 46, vy: dy * 30 - 6, life: rnd(0.75, 1.05) });
       sfx('don', c.x + 10, c.y - 84, { size: 176, rot: -0.12, life: 1.05 }); ticks(c.x - 96, c.y - 70, { dir: -2.4, n: 2, r: 4, len: 22, life: 0.45 }); ticks(c.x + 110, c.y - 60, { dir: -0.7, n: 2, r: 4, len: 22, life: 0.45 });
     later(200, () => { if (n !== this.seq) return; sq.s.x = 1.22; wob(c.x - c.w / 2 - 8, c.y, { dir: -1 }); wob(c.x + c.w / 2 + 8, c.y, { dir: 1 });
@@ -104,7 +104,7 @@ function ensureFront() {
   front.c = Object.assign(document.createElement('canvas'), { className: 'sakuga-fx' }); front.c.setAttribute('aria-hidden', 'true');
   document.body.append(front.c); front.g = front.c.getContext('2d'); size();
 }
-function size() { dpr = Math.min(2.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
+function size() { dpr = Math.min(1.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
 addEventListener('resize', size);
 function backLayer(canvas) { const L = { c: canvas, g: canvas.getContext('2d'), live: [], dirty: false }; layers.push(L); return L; }
 const add = (life, draw, L) => { const p = { t: 0, life, draw }; if (!calm) { L = L || front; if (L === front) ensureFront(); L.live.push(p); start(); } return p; };
@@ -140,13 +140,13 @@ function advance(dt) {
   tick(dt);
 }
 function loop(ms) {
-  if (!running) return;
+  if (!running) return; if (document.hidden) { running = false; return; }
   const dt = clamp((ms - last) / 1000, 0, 0.034); last = ms;   // a frame's timestamp can be earlier than the moment the loop started
   if (!api.paused) advance(dt);
   if (!frames.size && !timers.length && layers.every((L) => !L.live.length && !L.dirty)) { running = false; return; }
   requestAnimationFrame(loop);
 }
-function start() { if (running) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
+function start() { if (running || document.hidden) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
 
 // ───────── the effects ─────────
 // circles drawn as one shape: outline, shadow tone, then the light side slid up and to the left
@@ -313,6 +313,7 @@ class Base extends HTMLElement {
 }
 const define = (tag, cls) => { if (!customElements.get(tag)) customElements.define(tag, cls); };
 
+document.addEventListener("visibilitychange", () => { if (!document.hidden && (frames.size || timers.length || front.live.length)) start(); });
 const api = window.SakugaFX = {
   version: 1, paused: false,
   get P() { return P; }, get calm() { return calm; }, get now() { return now; },
@@ -325,3 +326,4 @@ const api = window.SakugaFX = {
 // <<< sakuga core
 component(window.SakugaFX);
 })();
+

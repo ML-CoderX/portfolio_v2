@@ -86,7 +86,7 @@ function ensureFront() {
   front.c = Object.assign(document.createElement('canvas'), { className: 'sakuga-fx' }); front.c.setAttribute('aria-hidden', 'true');
   document.body.append(front.c); front.g = front.c.getContext('2d'); size();
 }
-function size() { dpr = Math.min(2.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
+function size() { dpr = Math.min(1.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
 addEventListener('resize', size);
 function backLayer(canvas) { const L = { c: canvas, g: canvas.getContext('2d'), live: [], dirty: false }; layers.push(L); return L; }
 const add = (life, draw, L) => { const p = { t: 0, life, draw }; if (!calm) { L = L || front; if (L === front) ensureFront(); L.live.push(p); start(); } return p; };
@@ -122,13 +122,13 @@ function advance(dt) {
   tick(dt);
 }
 function loop(ms) {
-  if (!running) return;
+  if (!running) return; if (document.hidden) { running = false; return; }
   const dt = clamp((ms - last) / 1000, 0, 0.034); last = ms;   // a frame's timestamp can be earlier than the moment the loop started
   if (!api.paused) advance(dt);
   if (!frames.size && !timers.length && layers.every((L) => !L.live.length && !L.dirty)) { running = false; return; }
   requestAnimationFrame(loop);
 }
-function start() { if (running) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
+function start() { if (running || document.hidden) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
 
 // ───────── the effects ─────────
 // circles drawn as one shape: outline, shadow tone, then the light side slid up and to the left
@@ -295,6 +295,7 @@ class Base extends HTMLElement {
 }
 const define = (tag, cls) => { if (!customElements.get(tag)) customElements.define(tag, cls); };
 
+document.addEventListener("visibilitychange", () => { if (!document.hidden && (frames.size || timers.length || front.live.length)) start(); });
 const api = window.SakugaFX = {
   version: 1, paused: false,
   get P() { return P; }, get calm() { return calm; }, get now() { return now; },
@@ -307,3 +308,4 @@ const api = window.SakugaFX = {
 // <<< sakuga core
 component(window.SakugaFX);
 })();
+

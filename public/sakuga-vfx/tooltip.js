@@ -23,11 +23,17 @@ class SakugaTooltip extends fx.Base {
   setup() {
     const b = this.b = this.$('.help'); this.tip = this.$('.tip'); this.s = new Spring(0, 460, 15); this.bs = squashy(b, { low: 0.78, wide: 0.3 }); this.isOpen = false;
     b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this.show(true); }); b.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.show(false); });
-    b.addEventListener('focus', () => this.show(true)); b.addEventListener('blur', () => this.show(false)); b.addEventListener('click', () => this.show(!this.isOpen || this.root.activeElement === b));
+    b.addEventListener('focus', () => { if (b.matches(':focus-visible')) this.show(true); }); b.addEventListener('blur', () => this.show(false)); b.addEventListener('click', (event) => { if (event.pointerType !== 'mouse') this.show(!this.isOpen); });
     b.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.show(false); });
   }
   show(on = true) {
-    if (on === this.isOpen) return; this.isOpen = on; this.s.to = on ? 1 : 0; this.s.d = on ? 15 : 34; if (!on) return; this.bs.s.v += 2;
+    if (on === this.isOpen) return; this.isOpen = on; this.toggleAttribute('data-open', on); this.s.to = on ? 1 : 0; this.s.d = on ? 15 : 34; if (!on) return; this.bs.s.v += 2;
+    const rect = this.b.getBoundingClientRect();
+    const half = this.tip.offsetWidth / 2;
+    const center = rect.left + rect.width / 2;
+    const shift = Math.max(10 + half, Math.min(innerWidth - 10 - half, center)) - center;
+    this.tip.style.left = 'calc(50% + ' + shift + 'px)';
+    this.toggleAttribute('data-below', rect.top < this.tip.offsetHeight + 95);
     later(120, () => { if (!this.isOpen) return; const c = at(this.tip), q = at(this.b);
       puff(c.x - c.w / 2 - 8, c.y - 12, { size: 8, n: 4, vx: -14, vy: -10, life: 0.8 }); puff(c.x + c.w / 2 + 10, c.y + 12, { size: 8, n: 4, vx: 14, vy: -6, life: 0.8 }); puff(c.x - c.w / 2 - 4, c.y + 22, { size: 5, n: 3, vx: -10, life: 0.6 });
       ticks(c.x + c.w / 2 - 2, c.y - c.h / 2 - 6, { dir: -1.0, n: 3, r: 5, len: 16, fan: 0.36, life: 0.5 }); ring(q.x, q.y - q.h / 2 - 3, { rx: 22, ry: 5, life: 0.5, w: 3 }); sfx('kachi', c.x + 6, c.y - 46, { size: 96, rot: -0.08, life: 0.8, ...hollow() }); });
@@ -79,7 +85,7 @@ function ensureFront() {
   front.c = Object.assign(document.createElement('canvas'), { className: 'sakuga-fx' }); front.c.setAttribute('aria-hidden', 'true');
   document.body.append(front.c); front.g = front.c.getContext('2d'); size();
 }
-function size() { dpr = Math.min(2.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
+function size() { dpr = Math.min(1.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
 addEventListener('resize', size);
 function backLayer(canvas) { const L = { c: canvas, g: canvas.getContext('2d'), live: [], dirty: false }; layers.push(L); return L; }
 const add = (life, draw, L) => { const p = { t: 0, life, draw }; if (!calm) { L = L || front; if (L === front) ensureFront(); L.live.push(p); start(); } return p; };
@@ -115,13 +121,13 @@ function advance(dt) {
   tick(dt);
 }
 function loop(ms) {
-  if (!running) return;
+  if (!running) return; if (document.hidden) { running = false; return; }
   const dt = clamp((ms - last) / 1000, 0, 0.034); last = ms;   // a frame's timestamp can be earlier than the moment the loop started
   if (!api.paused) advance(dt);
   if (!frames.size && !timers.length && layers.every((L) => !L.live.length && !L.dirty)) { running = false; return; }
   requestAnimationFrame(loop);
 }
-function start() { if (running) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
+function start() { if (running || document.hidden) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
 
 // ───────── the effects ─────────
 // circles drawn as one shape: outline, shadow tone, then the light side slid up and to the left
@@ -288,6 +294,7 @@ class Base extends HTMLElement {
 }
 const define = (tag, cls) => { if (!customElements.get(tag)) customElements.define(tag, cls); };
 
+document.addEventListener("visibilitychange", () => { if (!document.hidden && (frames.size || timers.length || front.live.length)) start(); });
 const api = window.SakugaFX = {
   version: 1, paused: false,
   get P() { return P; }, get calm() { return calm; }, get now() { return now; },
@@ -300,3 +307,5 @@ const api = window.SakugaFX = {
 // <<< sakuga core
 component(window.SakugaFX);
 })();
+
+

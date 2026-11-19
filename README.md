@@ -4,7 +4,7 @@ A standalone, fixed-light manga portfolio for [saadar.dev](https://saadar.dev/).
 
 ## Run locally
 
-Use Node 22.13 or newer and npm.
+Use Node 22.19 or newer and npm.
 
     npm ci
     npm run dev

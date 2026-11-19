@@ -114,7 +114,7 @@ async function fallbacks(browser) {
   await blocked.locator('.r3f-layer').waitFor({ state: 'detached' })
   await blocked.getByRole('button', { name: 'Copy', exact: true }).click()
   await blocked.getByText('Email selected. Use your device’s copy command.').waitFor()
-  assert.equal(await blocked.locator('canvas').count(), 0)
+  await blocked.locator('canvas').waitFor({ state: 'detached' })
   await blocked.close()
 }
 

@@ -56,7 +56,7 @@ export const copy = {
   work: { chapter: '[CHAPTER 01 // SELECTED WORK]', stamp: '★ DOKAN!', title: 'Notable runs &', accent: 'missions', intro: 'Four projects across mobile development and applied machine learning. Open a dossier to see how Cashlio and DocuAI work.' },
   about: {
     chapter: '[CHAPTER 02 // ORIGIN STORY]', stamp: '★ CHARACTER FILE', title: 'Character bio &', accent: 'philosophy',
-    alt: 'Manga-style illustrated character at a workstation',
+    alt: 'Manga-style character portrait with a pink visor',
     stats: ['CLASS: DEVELOPER', 'SPEC: CS + AI', 'STATUS: ONLINE'],
     log: 'DIALOGUE // FIRST-PERSON',
     quote: '“Hey! I’m Saad — a developer who treats code like sakuga animation: every frame and algorithm crafted with deliberate weight, rhythm, and precision.”',

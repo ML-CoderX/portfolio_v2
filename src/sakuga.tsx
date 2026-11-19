@@ -55,13 +55,30 @@ export function useSakuga() {
         setReady({ button: false, toast: false, tooltip: false })
         return
       }
-      cancel = afterPaint(() => {
-        // Load the button first so all components share the same core.
+      function enable(component: Component) {
         void load('button').then(async button => {
-          const [toast, tooltip] = await Promise.all([load('toast'), load('tooltip')])
-          if (current && !motion.matches) setReady({ button, toast, tooltip })
+          if (current && !motion.matches) setReady(value => ({ ...value, button }))
+          if (component === 'button' || motion.matches) return
+          const installed = await load(component)
+          if (current && !motion.matches) setReady(value => ({ ...value, [component]: installed }))
         })
-      })
+      }
+      let observer: IntersectionObserver | undefined
+      const first = afterPaint(() => {
+        enable('button')
+        observer = new IntersectionObserver(entries => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue
+            observer?.unobserve(entry.target)
+            enable(entry.target.id === 'contact' ? 'toast' : 'tooltip')
+          }
+        }, { rootMargin: '180px 0px' })
+        for (const id of ['work', 'contact']) {
+          const target = document.getElementById(id)
+          if (target) observer.observe(target)
+        }
+      }, matchMedia('(pointer: coarse)').matches ? 2300 : 500)
+      cancel = () => { first(); observer?.disconnect() }
     }
     sync()
     motion.addEventListener('change', sync)

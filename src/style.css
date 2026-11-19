@@ -98,8 +98,18 @@ p { line-height: 1.62; }
 .terminal-body li span { display: inline-block; white-space: nowrap; vertical-align: bottom; }
 .terminal-body svg { width: 100%; fill: var(--pink); }
 .terminal-body path { fill: none; stroke: var(--yellow); stroke-width: 2; }
-.is-typing li span { animation: typing .27s steps(16,end) calc(var(--step) * .25s) both; }
-.is-typing path { stroke-dasharray: 1; animation: trace .65s ease-out .4s both; }
+.hero-entrance h1 { animation: slam .42s cubic-bezier(.22,1,.36,1) both; }
+.hero-entrance .hero-copy { animation: shake .14s linear .13s both; }
+.hero-entrance [data-stamp] { animation: stamp .31s cubic-bezier(.22,1,.36,1) .13s both; }
+.hero-entrance .impact { animation: burst .28s ease-out both; }
+.hero-entrance .speed-lines { animation: speed .32s ease-out both; }
+.hero-entrance .terminal li span { animation: typing .27s steps(16,end) calc(var(--step) * .25s) both; }
+.hero-entrance .terminal path { stroke-dasharray: 1; animation: trace .65s ease-out .4s both; }
+@keyframes slam { 0% { scale: .86; rotate: -3deg; } 52% { scale: 1.08; rotate: 1deg; } 100% { scale: 1; rotate: 0deg; } }
+@keyframes stamp { 0% { scale: .82; } 63% { scale: 1.09; } 100% { scale: 1; } }
+@keyframes shake { 0%, 100% { translate: 0; } 25%, 75% { translate: 2px; } 50% { translate: -2px; } }
+@keyframes burst { from { opacity: .9; scale: .65; } to { opacity: 0; scale: 1.4; } }
+@keyframes speed { from { opacity: .45; } to { opacity: .18; } }
 @keyframes typing { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes trace { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .chapter-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 25px; }

@@ -112,11 +112,6 @@ function ObserveCanvas({ onPaint, onFailure }: Callbacks) {
   return null
 }
 
-function Fallback({ onFailure }: Pick<Callbacks, 'onFailure'>) {
-  useEffect(onFailure, [onFailure])
-  return null
-}
-
 export default function Workstation(callbacks: Callbacks): ReactNode {
   const wrapper = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(!document.hidden)
@@ -134,7 +129,7 @@ export default function Workstation(callbacks: Callbacks): ReactNode {
   }, [])
   return <div className="r3f-layer" aria-hidden="true" ref={wrapper}>
     <CanvasBoundary onFailure={callbacks.onFailure}>
-      <Canvas fallback={<Fallback onFailure={callbacks.onFailure} />} dpr={[1, 1.5]} frameloop={visible ? 'always' : 'never'} camera={{ position: [0, 3.05, 6.5], fov: 36 }} gl={{ alpha: true, antialias: true }}>
+      <Canvas dpr={[1, 1.5]} frameloop={visible ? 'always' : 'never'} camera={{ position: [0, 3.05, 6.5], fov: 36 }} gl={{ alpha: true, antialias: true }}>
         <ambientLight intensity={.95} />
         <directionalLight position={[2, 4, 4]} intensity={2.3} />
         <Laptop />

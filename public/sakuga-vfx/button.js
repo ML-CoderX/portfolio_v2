@@ -326,4 +326,3 @@ const api = window.SakugaFX = {
 // <<< sakuga core
 component(window.SakugaFX);
 })();
-

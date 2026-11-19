@@ -106,16 +106,20 @@ function Dossier({ project }: { project: Project }) {
 
   const title = project.dossier!.title
   return ready ? <>
-    <button type="button" ref={opener} className="comic-action pink" data-sfx={copy.effects.impact} onClick={() => dialog.current?.showModal()}>
+    <button type="button" ref={opener} className="comic-action pink" data-sfx={copy.effects.impact} onClick={() => {
+      dialog.current?.showModal()
+      dialog.current?.querySelector('button')?.focus()
+    }}>
       <Icon name="folder_open" />{copy.open}<span className="sr-only"> · {project.title}</span>
     </button>
     <dialog ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={() => opener.current?.focus()} onKeyDown={event => {
       if (event.key !== 'Tab') return
-      const controls = event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]')
-      const first = controls[0]
-      const last = controls[controls.length - 1]
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+      const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'))
+      const position = controls.findIndex(control => control === document.activeElement)
+      const step = event.shiftKey ? -1 : 1
+      const next = position === -1 ? 0 : (position + step + controls.length) % controls.length
+      event.preventDefault()
+      controls[next]?.focus()
     }} onClick={event => {
       const rect = event.currentTarget.getBoundingClientRect()
       if (event.target === event.currentTarget && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) event.currentTarget.close()

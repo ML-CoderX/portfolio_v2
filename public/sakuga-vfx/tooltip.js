@@ -23,7 +23,7 @@ class SakugaTooltip extends fx.Base {
   setup() {
     const b = this.b = this.$('.help'); this.tip = this.$('.tip'); this.s = new Spring(0, 460, 15); this.bs = squashy(b, { low: 0.78, wide: 0.3 }); this.isOpen = false;
     b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this.show(true); }); b.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.show(false); });
-    b.addEventListener('focus', () => { if (b.matches(':focus-visible')) this.show(true); }); b.addEventListener('blur', () => this.show(false)); b.addEventListener('click', (event) => { if (event.pointerType !== 'mouse') this.show(!this.isOpen); });
+    b.addEventListener('focus', () => this.show(true)); b.addEventListener('blur', () => this.show(false)); b.addEventListener('click', () => this.show(true)); b.addEventListener('touchend', () => this.show(true), { passive: true });
     b.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.show(false); });
   }
   show(on = true) {
@@ -307,5 +307,3 @@ const api = window.SakugaFX = {
 // <<< sakuga core
 component(window.SakugaFX);
 })();
-
-

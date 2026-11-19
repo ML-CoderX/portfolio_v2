@@ -4,7 +4,7 @@ import { chromium, devices, firefox, webkit } from '@playwright/test'
 
 const baseURL = process.env.QA_URL || 'http://127.0.0.1:4173'
 const runners = {
-  chrome: [chromium, { channel: 'chrome', args: ['--enable-unsafe-swiftshader'] }],
+  chrome: [chromium, { channel: 'chrome', args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'] }],
   firefox: [firefox, {}],
   webkit: [webkit, {}],
 }
@@ -20,7 +20,7 @@ async function interact(browser, name, options = {}) {
   page.on('response', response => responses.push(response.url()))
   await page.goto(baseURL)
   await page.getByRole('heading', { level: 1, name: 'Saad AR' }).waitFor()
-  await page.waitForFunction(() => !!customElements.get('sakuga-tooltip'))
+  await page.waitForFunction(() => !!customElements.get('sakuga-button'))
   if (name === 'chrome-desktop') {
     await page.locator('.workstation img.model-painted').waitFor({ state: 'attached', timeout: 12000 })
   }
@@ -37,6 +37,7 @@ async function interact(browser, name, options = {}) {
   await page.screenshot({ path: 'qa/' + name + '.png', fullPage: true })
   const dossier = page.getByRole('button', { name: 'Open dossier · Cashlio' })
   await dossier.click()
+  await page.waitForFunction(() => !!customElements.get('sakuga-tooltip'))
   const dialog = page.getByRole('dialog')
   await dialog.getByText('Architecture blueprint').waitFor()
   assert.equal(await page.locator('html').evaluate(element => getComputedStyle(element).overflow), 'hidden')
@@ -64,6 +65,8 @@ async function interact(browser, name, options = {}) {
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
     writeText: async value => { window.__copiedEmail = value },
   } }))
+  await page.locator('#contact').scrollIntoViewIfNeeded()
+  await page.waitForFunction(() => !!customElements.get('sakuga-toast'))
   await page.locator('sakuga-button').getByRole('button', { name: 'Copy', exact: true }).click()
   await page.getByText('Email copied!', { exact: true }).waitFor()
   assert.equal(await page.evaluate(() => window.__copiedEmail), 'saad.ar.dev@gmail.com')

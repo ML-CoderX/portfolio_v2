@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react'
 
-export function afterPaint(callback: () => void) {
+export function afterPaint(callback: () => void, delay = 500) {
   let timer = 0
-  const frame = requestAnimationFrame(() => { timer = window.setTimeout(callback, 500) })
-  return () => { cancelAnimationFrame(frame); clearTimeout(timer) }
+  let frame = 0
+  let paints: PerformanceObserver | undefined
+  function schedule() {
+    paints?.disconnect()
+    timer = window.setTimeout(callback, delay)
+  }
+  if (performance.getEntriesByName('first-contentful-paint').length) schedule()
+  else if (PerformanceObserver.supportedEntryTypes.includes('paint')) {
+    paints = new PerformanceObserver(list => {
+      if (list.getEntries().some(entry => entry.name === 'first-contentful-paint')) schedule()
+    })
+    paints.observe({ type: 'paint', buffered: true })
+  } else {
+    frame = requestAnimationFrame(() => { frame = requestAnimationFrame(schedule) })
+  }
+  return () => { paints?.disconnect(); cancelAnimationFrame(frame); clearTimeout(timer) }
 }
 
 export function useWorkstation() {
@@ -28,12 +42,16 @@ export function useWorkstation() {
           timer = window.setTimeout(enable, touch.matches ? 6500 : 1100)
         }, { threshold: .25 })
         let timer = 0
-        observer.observe(hero)
-        hero.addEventListener('pointerdown', enable)
+        const art = hero.querySelector('.hero-art')
+        const painted = afterPaint(() => {
+          observer.observe(hero)
+          art?.addEventListener('pointerdown', enable)
+        }, 0)
         cancel = () => {
+          painted()
           clearTimeout(timer)
           observer.disconnect()
-          hero.removeEventListener('pointerdown', enable)
+          art?.removeEventListener('pointerdown', enable)
         }
       }
     }
@@ -118,12 +136,26 @@ export function useEnhancements() {
         particles.length = 0
         return
       }
-      const cancel = afterPaint(() => {
+      const hero = document.getElementById('hero')
+      const work = document.getElementById('work')
+      const cancelEntrance = afterPaint(() => {
+        if (scrollY < 100) hero?.classList.add('hero-entrance')
+      }, 70)
+      let stopAnimations: (() => void) | undefined
+      const observer = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return
+        observer.disconnect()
         void import('./motion').then(({ animatePage }) => {
-          if (run === generation) cleanup = animatePage()
+          if (run === generation) stopAnimations = animatePage()
         }).catch(() => {})
-      })
-      cleanup = cancel
+      }, { rootMargin: '240px 0px' })
+      if (work) observer.observe(work)
+      cleanup = () => {
+        cancelEntrance()
+        hero?.classList.remove('hero-entrance')
+        observer.disconnect()
+        stopAnimations?.()
+      }
     }
     updateProgress()
     motion()

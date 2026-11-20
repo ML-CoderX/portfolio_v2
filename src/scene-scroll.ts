@@ -3,6 +3,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { chapterTransitions, scenes, type SceneId, type ScenePlayback, type TransitionConfig } from './scenes'
 import { preparePortal, prepareShot } from './shot-motion'
+import { startProjectMotion } from './project-motion'
 
 const nativeScrollKeys = new Set(['Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' '])
 
@@ -28,6 +29,9 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
   let trigger: ScrollTrigger | undefined
   let frame = 0
   let active: SceneId = config.from
+  let projectMotion = { draw: () => {}, stop: () => {} }
+  const bridge = document.querySelector<SVGPathElement>('[data-ink-bridge]')
+  const sparkline = document.querySelector('.terminal-body svg')
 
   function reveal(section: HTMLElement, progress: number) {
     section.style.setProperty('--scene-clip', `${(1 - progress) * 65}%`)
@@ -36,6 +40,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
 
   function update() {
     frame = 0
+    projectMotion.draw()
     const max = root.scrollHeight - innerHeight
     const overall = max > 0 ? gsap.utils.clamp(0, 1, scrollY / max) : 0
     const scrollPadding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0
@@ -57,6 +62,19 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
     if (playback.progress !== progress || next === config.from || active === config.from) playback.invalidate?.()
     playback.progress = progress
     const desktop = root.dataset.sceneMode === 'webgl'
+    if (bridge) {
+      const rect = sparkline?.getBoundingClientRect()
+      const amount = desktop ? Math.min(1, progress / .25) : 0
+      bridge.style.opacity = String(amount * (1 - Math.min(1, Math.max(0, (progress - .25) / .2))))
+      bridge.style.strokeDashoffset = String(1 - amount)
+      if (rect && amount > 0) {
+        const x = rect.left + rect.width * .975
+        const y = rect.top + rect.height * .25
+        const endX = playback.origin.x * innerWidth
+        const endY = playback.origin.y * innerHeight
+        bridge.setAttribute('d', `M${x} ${y} C${x + 70} ${y} ${endX + 70} ${endY} ${endX} ${endY}`)
+      }
+    }
     if (desktop) drawPortal(progress)
     root.toggleAttribute('data-ink-spill', progress > 0 && progress < 1)
     if (energy) energy.style.transform = `scaleX(${overall})`
@@ -110,6 +128,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
   }
 
   function configure() {
+    projectMotion.stop()
     trigger?.kill()
     trigger = undefined
     for (const chapter of chapters) {
@@ -120,6 +139,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
     lenis = undefined
     gsap.ticker.remove(tick)
     const mode = root.dataset.sceneMode
+    projectMotion = startProjectMotion(reduced.matches ? 'static' : mode)
     if (!reduced.matches && mode !== 'static' && mode !== undefined && destination) {
       lenis = new Lenis({ autoRaf: false, smoothWheel: false, syncTouch: false, anchors: false })
       gsap.ticker.add(tick)
@@ -161,6 +181,7 @@ export function startSceneScroll(config: TransitionConfig, playback: ScenePlayba
   configure()
 
   return () => {
+    projectMotion.stop()
     cancelAnimationFrame(frame)
     reduced.removeEventListener('change', configure)
     window.removeEventListener('scene:mode', configure)

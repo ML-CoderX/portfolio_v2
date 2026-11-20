@@ -100,6 +100,7 @@ export function Transition({ config }: { config: TransitionConfig }) {
 
   return <>
     <output hidden className="scene-debug" data-scene-debug aria-live="off" />
+    <svg className="ink-bridge" aria-hidden="true"><path data-ink-bridge pathLength="1" /></svg>
     <div className="portal-shot" data-portal-shot aria-hidden="true">
       <img src={shotArtwork.portalRing} alt="" loading="lazy" />
     </div>

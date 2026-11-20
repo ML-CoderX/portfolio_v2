@@ -31,7 +31,7 @@ function Box({ size, at, color, gradient, outline = .036 }: {
   </group>
 }
 
-function Laptop() {
+function Laptop({ playback }: { playback: ScenePlayback }) {
   const rig = useRef<Group>(null)
   const pointer = useRef(new Vector2())
   const gradient = useMemo(() => {
@@ -53,9 +53,11 @@ function Laptop() {
   }, [])
   useFrame(({ clock }, delta) => {
     if (!rig.current) return
-    rig.current.position.y = -.12 + Math.sin(clock.elapsedTime * 1.45) * .065
-    rig.current.rotation.y = MathUtils.damp(rig.current.rotation.y, -.45 + pointer.current.x * .14, 5, delta)
-    rig.current.rotation.x = MathUtils.damp(rig.current.rotation.x, pointer.current.y * .09, 5, delta)
+    const approach = phase(playback.progress, 0, .32)
+    rig.current.position.y = -.12 + Math.sin(clock.elapsedTime * 1.45) * .065 * (1 - approach)
+    rig.current.rotation.y = MathUtils.damp(rig.current.rotation.y, -.45 + .14 * approach + pointer.current.x * .14 * (1 - approach), 5, delta)
+    rig.current.rotation.x = MathUtils.damp(rig.current.rotation.x, pointer.current.y * .09 * (1 - approach), 5, delta)
+    rig.current.scale.setScalar(1 + approach * .15)
   })
   return <group ref={rig} rotation={[0, -.45, 0]}>
     <Box size={[3.8, .19, 2.05]} at={[0, 0, .36]} color="#f6f3ec" gradient={gradient} />
@@ -317,7 +319,7 @@ function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
     {createPortal(<>
       <ambientLight intensity={.95} />
       <directionalLight position={[2, 4, 4]} intensity={2.3} />
-      <Laptop />
+      <Laptop playback={playback} />
     </>, laptopScene)}
     {materials.map((material, index) => <mesh key={material.uuid} frustumCulled={false} renderOrder={index + 1} material={material}>
       <planeGeometry args={[2, 2]} />

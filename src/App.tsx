@@ -7,6 +7,7 @@ import { heroToWork } from './scenes'
 import portrait from '../.scene-art/about/portrait.webp'
 import { ThemeSwitch } from './ThemeSwitch'
 import { useOpeningScreen } from './opening-screen'
+import { ProjectIllustration } from './ProjectIllustration'
 
 type Chapter = { chapter: string; stamp: string; title: string; accent: string; intro?: string }
 
@@ -140,6 +141,7 @@ function Work({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
         {projects.map(project => <article className={`project panel ${project.span}`} key={project.id} data-reveal>
           <div className="panel-top"><span>{project.badge}</span><b>{project.index}</b></div>
           <h3>{project.title}</h3><p>{project.description}</p>
+          <ProjectIllustration project={project.id} />
           <div className={'project-preview ' + project.id}>
             {project.preview.map(item => <div key={item}>{item}</div>)}
           </div>

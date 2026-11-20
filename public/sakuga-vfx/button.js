@@ -114,6 +114,14 @@ function ensureFront() {
   front.c = Object.assign(document.createElement('canvas'), { className: 'sakuga-fx' }); front.c.setAttribute('aria-hidden', 'true');
   if (!surfaceConsumer) document.body.append(front.c); front.g = front.c.getContext('2d'); size();
 }
+function clearFront() {
+  front.live.length = 0;
+  front.dirty = false;
+  if (!front.g) return;
+  front.g.resetTransform();
+  front.g.clearRect(0, 0, front.c.width, front.c.height);
+  surfaceConsumer?.(front.c);
+}
 function size() { dpr = Math.min(1.5, devicePixelRatio || 1); if (front.c) { front.c.width = innerWidth * dpr; front.c.height = innerHeight * dpr; } }
 addEventListener('resize', size);
 function backLayer(canvas) { const L = { c: canvas, g: canvas.getContext('2d'), live: [], dirty: false }; layers.push(L); return L; }
@@ -329,7 +337,7 @@ const api = window.SakugaFX = {
   version: 1, paused: false,
   get P() { return P; }, get calm() { return calm; }, get now() { return now; },
   TAU, clamp, lerp, rnd, Spring,
-  advance, later, persist, setSurfaceConsumer, blob, shape, get g() { return g; },
+  advance, later, persist, setSurfaceConsumer, clearFront, blob, shape, get g() { return g; },
   puff, burst, shards, ring, splash, slash, lines, ticks, donut, wob, kira, sfx, hollow, dotted,
   at, esc, squashy, Base, define,
 };

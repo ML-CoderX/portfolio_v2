@@ -13,9 +13,32 @@ try {
     document.querySelector('meta[name="theme-color"]').content = '#171321';
   }
 } catch {}
+{
+  const root = document.documentElement;
+  root.setAttribute('data-opening', '');
+  const finish = () => window.dispatchEvent(new Event('opening:complete'));
+  const deadline = setTimeout(finish, 3600);
+  const skip = event => { if (event.key === 'Tab' || event.key === 'Escape') finish(); };
+  window.addEventListener('keydown', skip, true);
+  window.addEventListener('opening:complete', () => {
+    clearTimeout(deadline);
+    root.removeAttribute('data-opening');
+    document.getElementById('opening-screen')?.remove();
+    window.removeEventListener('keydown', skip, true);
+  }, { once: true });
+}
 </script>
 </head>
 <body>
+<div id="opening-screen" class="opening-screen section-tone" hidden>
+  <div class="opening-panel panel">
+    <div class="opening-meter">
+      <progress aria-label="Portfolio loading progress" value=".12" max="1"></progress>
+      <sakuga-progress label="Portfolio loading progress" done-label="Ready ✓"></sakuga-progress>
+    </div>
+    <p class="opening-title" role="status">Loading portfolio</p>
+  </div>
+</div>
 <div id="root"><!--app--></div>
 <script type="module" src="/src/main.tsx"></script>
 </body>

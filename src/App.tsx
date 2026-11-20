@@ -6,6 +6,7 @@ import { Scene, SceneArtwork, Transition } from './Scene'
 import { heroToWork } from './scenes'
 import portrait from '../.scene-art/about/portrait.webp'
 import { ThemeSwitch } from './ThemeSwitch'
+import { useOpeningScreen } from './opening-screen'
 
 type Chapter = { chapter: string; stamp: string; title: string; accent: string; intro?: string }
 
@@ -201,6 +202,7 @@ function Contact({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
 }
 
 export function App() {
+  useOpeningScreen()
   const sakuga = useSakuga()
   useEnhancements()
   return <>

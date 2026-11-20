@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { afterPaint } from './enhancements'
+import { afterOpening, afterPaint } from './enhancements'
 import { ChapterShot } from './SceneShots'
 import { chapterTransitions, scenes, shotArtwork, type SceneId, type SceneMode, type ScenePlayback, type TransitionConfig } from './scenes'
 
@@ -60,10 +60,10 @@ export function Transition({ config }: { config: TransitionConfig }) {
       setMode('static')
       setLoadCanvas(false)
       if (reduce.matches || failed || !('WebGL2RenderingContext' in window)) return
-      cancel = afterPaint(() => {
+      cancel = afterOpening(() => afterPaint(() => {
         if (desktop.matches) setLoadCanvas(true)
         else setMode(canRenderWebGL() ? 'css' : 'static')
-      }, 0)
+      }, 0))
     }
     sync()
     reduce.addEventListener('change', sync)

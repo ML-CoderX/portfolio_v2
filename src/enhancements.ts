@@ -20,6 +20,17 @@ export function afterPaint(callback: () => void, delay = 500) {
   return () => { paints?.disconnect(); cancelAnimationFrame(frame); clearTimeout(timer) }
 }
 
+export function afterOpening(callback: () => () => void) {
+  if (!document.documentElement.hasAttribute('data-opening')) return callback()
+  let cancel: (() => void) | undefined
+  const open = () => { cancel = callback() }
+  window.addEventListener('opening:complete', open, { once: true })
+  return () => {
+    window.removeEventListener('opening:complete', open)
+    cancel?.()
+  }
+}
+
 export function useEnhancements() {
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
@@ -86,9 +97,9 @@ export function useEnhancements() {
         return
       }
       const hero = document.getElementById('hero')
-      const cancelEntrance = afterPaint(() => {
+      const cancelEntrance = afterOpening(() => afterPaint(() => {
         if (scrollY < 100) hero?.classList.add('hero-entrance')
-      }, 70)
+      }, 70))
       let stopAnimations: (() => void) | undefined
       const observer = new IntersectionObserver(entries => {
         if (!entries.some(entry => entry.isIntersecting)) return

@@ -25,12 +25,13 @@ declare global {
       persist: (draw: () => void) => Particle
       g: CanvasRenderingContext2D
       calm: boolean
+      clearFront?: () => void
       setSurfaceConsumer: (consumer: ((canvas: HTMLCanvasElement) => void) | null) => void
     }
   }
 }
 
-type Component = 'button' | 'toast' | 'tooltip' | 'toggle'
+type Component = 'button' | 'toast' | 'tooltip' | 'toggle' | 'progress'
 const loads = new Map<Component, Promise<boolean>>()
 export function loadSakuga(component: Component) {
   const previous = loads.get(component)

@@ -9,7 +9,8 @@ const runners = {
   firefox: [firefox, {}],
   webkit: [webkit, {}],
 }
-const targets = process.argv.slice(2)
+const openingOnly = process.argv.includes('--opening-only')
+const targets = process.argv.slice(2).filter(flag => flag !== '--opening-only')
 const names = targets.length ? targets : Object.keys(runners)
 await mkdir('qa', { recursive: true })
 
@@ -275,6 +276,7 @@ async function fallbacks(browser) {
   const passive = await browser.newPage({ javaScriptEnabled: false })
   await passive.goto(baseURL)
   await passive.getByRole('heading', { name: 'Saad AR', level: 1 }).waitFor()
+  await passive.locator('#opening-screen').waitFor({ state: 'hidden' })
   await passive.getByText('Open dossier', { exact: true }).first().click()
   await passive.getByText('Select a profile', { exact: true }).waitFor()
   assert.equal(await passive.locator('main article').count(), 4)
@@ -284,6 +286,7 @@ async function fallbacks(browser) {
   const requests = []
   reduced.on('request', request => requests.push(request.url()))
   await reduced.goto(baseURL)
+  await reduced.locator('#opening-screen').waitFor({ state: 'detached' })
   await reduced.getByRole('button', { name: 'Open dossier · Cashlio' }).waitFor()
   await reduced.locator('.workstation > img').waitFor()
   assert.equal(await reduced.locator('canvas').count(), 0)
@@ -307,6 +310,7 @@ async function fallbacks(browser) {
     document.execCommand = () => false
   })
   await blocked.goto(baseURL)
+  await blocked.locator('#opening-screen').waitFor({ state: 'detached' })
   if (await blocked.evaluate(() => 'WebGL2RenderingContext' in window)) {
     await blocked.waitForFunction(() => performance.getEntriesByType('resource').some(entry => entry.name.includes('/Workstation-')))
   }
@@ -320,11 +324,53 @@ async function fallbacks(browser) {
   await blocked.close()
 }
 
+async function verifyOpeningScreen(browser, name) {
+  const page = await browser.newPage()
+  let releaseImage
+  const delay = new Promise(resolve => { releaseImage = resolve })
+  await page.route('**/workstation.svg', async route => {
+    await delay
+    await route.continue()
+  })
+  try {
+    await page.goto(baseURL, { waitUntil: 'domcontentloaded' })
+    const opening = page.locator('#opening-screen')
+    await opening.waitFor({ state: 'visible' })
+    await opening.locator('[data-enhanced] sakuga-progress').waitFor({ state: 'visible' })
+    await opening.getByRole('progressbar', { name: 'Portfolio loading progress' }).waitFor()
+    assert.equal(await page.locator('.hero-entrance, .r3f-layer').count(), 0)
+    if (name === 'chrome') await page.screenshot({ path: 'qa/opening-screen.png' })
+    releaseImage()
+    await opening.waitFor({ state: 'detached' })
+    await page.locator('.hero-entrance').waitFor()
+  } finally {
+    releaseImage()
+    await page.close()
+  }
+
+  const noApp = await browser.newPage()
+  try {
+    await noApp.route('**/assets/index-*.js', route => route.abort())
+    await noApp.goto(baseURL, { waitUntil: 'domcontentloaded' })
+    await noApp.getByRole('progressbar', { name: 'Portfolio loading progress' }).waitFor()
+    await noApp.keyboard.press('Tab')
+    await noApp.locator('#opening-screen').waitFor({ state: 'detached' })
+  } finally {
+    await noApp.close()
+  }
+}
+
 for (const name of names) {
   const [engine, options] = runners[name]
   let browser
   try {
     browser = await engine.launch(options)
+    if (openingOnly || name === 'chrome') await verifyOpeningScreen(browser, name)
+    if (openingOnly) {
+      await fallbacks(browser)
+      console.log(name + ' ' + browser.version() + ' opening screen passed')
+      continue
+    }
     await interact(browser, name + '-desktop', { viewport: { width: 1440, height: 900 } })
     await fallbacks(browser)
     if (name !== 'firefox') {

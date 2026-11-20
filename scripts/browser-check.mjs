@@ -224,7 +224,7 @@ async function interact(browser, name, options = {}) {
       .map(entry => entry.startTime),
   }))
   if (resources.paint) assert.ok(resources.enhancements.every(time => time > resources.paint))
-  assert.equal(await page.locator('article').count(), 4)
+  assert.equal(await page.locator('#work article').count(), 4)
   assert.equal(await page.locator('#about figure.character > *').count(), 1)
   assert.match(await page.locator('#about figure.character > img').getAttribute('src'), /portrait-/)
   assert.ok(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth), 'Horizontal overflow')
@@ -279,7 +279,7 @@ async function fallbacks(browser) {
   await passive.locator('#opening-screen').waitFor({ state: 'hidden' })
   await passive.getByText('Open dossier', { exact: true }).first().click()
   await passive.getByText('Select a profile', { exact: true }).waitFor()
-  assert.equal(await passive.locator('main article').count(), 4)
+  assert.equal(await passive.locator('#work article').count(), 4)
   await passive.close()
 
   const reduced = await browser.newPage({ reducedMotion: 'reduce' })

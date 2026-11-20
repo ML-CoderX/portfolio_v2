@@ -25,17 +25,17 @@ function ChapterHeading({ chapter, id }: { chapter: Chapter; id: string }) {
 
 function Navigation({ effectsReady }: { effectsReady: boolean }) {
   return <header className="site-header">
-    <a className="skip" href="#main">{copy.skip}</a>
+    <a className="skip" href="#main" data-link-impact>{copy.skip}</a>
     <div className="energy" aria-hidden="true"><span data-energy /></div>
     <div className="header-row">
-      <div className="brand-group"><a className="brand" href="#hero">{profile.name}<i /></a><span className="ready" data-active-chapter>{copy.ready}</span></div>
-      <nav aria-label={copy.nav} className="desktop-nav">{copy.navLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+      <div className="brand-group"><a className="brand" href="#hero" data-link-impact>{profile.name}<i /></a><span className="ready" data-active-chapter>{copy.ready}</span></div>
+      <nav aria-label={copy.nav} className="desktop-nav">{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
       <div className="header-actions">
         <details className="mobile-nav" onClick={event => {
           if ((event.target as Element).closest('a')) event.currentTarget.open = false
         }}>
-          <summary>{copy.menu}</summary>
-          <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+          <summary data-link-impact>{copy.menu}</summary>
+          <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
         </details>
         <ThemeSwitch effectsReady={effectsReady} />
         <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" /><span className="header-resume-label">{copy.resume}</span></ActionLink>
@@ -90,7 +90,7 @@ function DossierBody({ project }: { project: Project }) {
     <h4>{copy.blueprint}</h4>
     <ol className="pipeline">{dossier.stages.map(stage => <li key={stage}>{stage}</li>)}</ol>
     <ul className="notes">{dossier.notes.map(note => <li key={note}>{note}</li>)}</ul>
-    <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}</a>
+    {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}</a>}
   </div>
 }
 
@@ -143,12 +143,12 @@ function Work({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
           <div className={'project-preview ' + project.id}>
             {project.preview.map(item => <div key={item}>{item}</div>)}
           </div>
-          <ul className="chips" aria-label={copy.technologies}>{project.stack.map(item => <li key={item}><Chip title={item} hint={project.title} enhanced={sakuga.tooltip} /></li>)}</ul>
-          <div className="action-row">
+          {project.stack.length > 0 && <ul className="chips" aria-label={copy.technologies}>{project.stack.map(item => <li key={item}><Chip title={item} hint={project.title} enhanced={sakuga.tooltip} /></li>)}</ul>}
+          {(project.dossier || project.demo || project.repo) && <div className="action-row">
             {project.dossier && <Dossier project={project} />}
             {project.demo && <ActionLink href={project.demo} appearance="pink" sfx={copy.effects.toolkit}><Icon name="launch" />{copy.demo}<span className="sr-only"> · {project.title}</span></ActionLink>}
-            <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>
-          </div>
+            {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>}
+          </div>}
         </article>)}
       </div>
     </div>

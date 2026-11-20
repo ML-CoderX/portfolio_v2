@@ -85,6 +85,9 @@ p { line-height: 1.62; }
 .brand-group, .header-actions, .desktop-nav { display: flex; align-items: center; gap: 20px; }
 .desktop-nav { gap: clamp(12px, 3vw, 40px); font-size: 14px; font-weight: 800; text-transform: uppercase; }
 .desktop-nav a:hover, .footer nav a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  .site-header [data-link-impact]:active { scale: 1.02 .94; }
+}
 .brand, .ready, .hero-badge, .sfx-stamp, .art-stamp, .contact-stamp {
   font: 700 12px/1.35 var(--mono); text-transform: uppercase; border: var(--rule); box-shadow: 3px 3px var(--ink); background: var(--white); padding: 5px 9px;
 }
@@ -266,8 +269,6 @@ p { line-height: 1.62; }
 .project-preview div { padding: 5px 8px; border: var(--rule); background: var(--white); font: 19px/1.08 var(--display); }
 .project-preview.docuai { background-color: var(--ink); }
 .project-preview.docuai div { background: var(--lavender); }
-.project-preview.ipl { background-color: var(--yellow); }
-.project-preview.laptop { background-color: var(--pink-paper); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 14px; margin-top: auto; }
 .chip { display: inline-block; min-height: 26px; border: 2px solid var(--ink); background: var(--white); color: var(--reading-ink); padding: 3px 6px; font: 700 12px/1.3 var(--mono); }
 sakuga-tooltip.chip { padding: 0; border: 0; margin: 0; vertical-align: top; }

@@ -106,12 +106,25 @@ export function LinkEffects({ ready }: { ready: boolean }) {
   const effect = useRef<SakugaButton>(null)
   useEffect(() => {
     if (!ready) return
+    const presses = new WeakMap<HTMLElement, Animation>()
     function click(event: MouseEvent) {
-      const link = (event.target as Element).closest<HTMLElement>('[data-link-impact]')
-      if (link && !window.SakugaFX?.calm) effect.current?.impact(link)
+      if (event.button !== 0 || !(event.target instanceof Element) || window.SakugaFX?.calm) return
+      const control = event.target.closest<HTMLElement>('[data-link-impact]')
+      if (!control) return
+      effect.current?.impact(control)
+      // The WebGL effects layer sits beneath the sticky header. Animate the control itself as well.
+      if (control.closest('.site-header')) {
+        presses.get(control)?.cancel()
+        presses.set(control, control.animate([
+          { scale: '1.04 .86' },
+          { scale: '.98 1.07', offset: .46 },
+          { scale: '1' },
+        ], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)' }))
+      }
     }
-    document.addEventListener('click', click)
-    return () => document.removeEventListener('click', click)
+    // Capture the position before the mobile menu closes or an anchor starts scrolling.
+    document.addEventListener('click', click, true)
+    return () => document.removeEventListener('click', click, true)
   }, [ready])
   return ready ? <div inert aria-hidden="true" className="link-effects"><sakuga-button ref={effect}>{copy.hero.work}</sakuga-button></div> : null
 }

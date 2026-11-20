@@ -10,8 +10,8 @@ The attached HTML titled “Saad AR // Cel-Shaded Dev Portfolio” supplied the 
 | Cashlio dossier | Sub-12 ms and <12 ms latency claims, 11.4 ms at the 99th percentile, 60.0 FPS and zero dropped frames, 99.98% consistency, ACID guarantee, 1.0 integrity in the illustrative code, production-live badge | Profile selection, transaction entry, history, analytics, and PDF export. Notes cover profile isolation, backup, and the public Android testing build |
 | DocuAI card | 99.4% F1, 94% graphic fill, 840k tokens, 1.12 s, clean safety filter, Gemini 1.5 Pro version badge | Symptom input, model prediction, and Gemini suggestions |
 | DocuAI dossier | 99.4% F1 in pipeline and entity score, 840 ms, 0.00% hallucination rate, 1,500 verified test cases, REPL-ready badge | Published symptom-to-suggestion flow. The sample FHIR record, page, bounding box, glucose value (98), and reference range (70–99) were removed |
-| IPL | 67.2% win, 42 runs in 18 balls, Team A vs Team B | Second-innings inputs and a win probability estimate |
-| Laptop price predictor | 0.892 R² and 1,300+ training configurations | Hardware specifications and a price estimate in rupees |
+| IPL | 67.2% win, 42 runs in 18 balls, Team A vs Team B | The project card was removed at the owner's request |
+| Laptop price predictor | 0.892 R² and 1,300+ training configurations | The project card was removed at the owner's request |
 | About | 99.8% precision, sub-100 ms target, never-drop-a-frame claim, LOG 2025.1 | Careful evaluation, short feedback loops, and an undated first-person note |
 | Timeline | 2024–present internship, 2021–2025 B.Tech, 2.3× inference speedup, top-tier academic standing | Undated Cashlio and DocuAI project milestones |
 | Grades | Cashlio Tier S for Angular and TypeScript, Tier A for Ionic, dossier Tier S, toolkit EXP labels (eight S, seven A, one B) | Unranked tool labels and equal-length decorative bars |
@@ -22,7 +22,7 @@ The Cashlio export described a ledger worker and DocuAI described OCR and FHIR n
 ## Placeholder destinations
 
 - All four project GitHub links use the repositories published on the current portfolio. The laptop demo uses its verified Streamlit deployment.
-- Cashlio’s sandbox and DocuAI’s API REPL are omitted pending hosted endpoints. The IPL demo is recorded as a source TODO because its published deployment timed out.
+- Cashlio’s sandbox and DocuAI’s API REPL are omitted pending hosted endpoints.
 - Contact and footer GitHub and LinkedIn use the published profiles. The unresolved X profile is omitted. The email link uses `mailto:rsaadt3@gmail.com`.
 - The brand and back-to-top controls use `#hero`. The Contact navigation item points to the real `#contact` section.
-- Both résumé actions use `/Saad_Resume.pdf`. The build supplies a valid placeholder until the real résumé is added.
+- Both résumé actions use `/Saad_Resume.pdf`, which now contains the supplied résumé.

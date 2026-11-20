@@ -7,7 +7,7 @@ export type Project = {
   description: string
   preview: readonly string[]
   stack: readonly string[]
-  repo: string
+  repo?: string
   demo?: string
   span: string
   dossier?: { title: string; description: string; stages: readonly string[]; notes: readonly string[] }
@@ -54,7 +54,7 @@ export const copy = {
     terminal: 'cashlio // walkthrough', alt: 'Cel-shaded laptop with a violet screen and pink keyboard',
     steps: ['Select profile', 'Record transaction', 'View summary'],
   },
-  work: { chapter: '[CHAPTER 01 // SELECTED WORK]', stamp: '★ DOKAN!', title: 'Notable runs &', accent: 'missions', intro: 'Four projects across mobile development and applied machine learning. Open a dossier to see how Cashlio and DocuAI work.' },
+  work: { chapter: '[CHAPTER 01 // SELECTED WORK]', stamp: '★ DOKAN!', title: 'Notable runs &', accent: 'missions', intro: 'Web, mobile, and machine learning projects. Open a dossier to see how Cashlio and DocuAI work.' },
   about: {
     chapter: '[CHAPTER 02 // ORIGIN STORY]', stamp: '★ CHARACTER FILE', title: 'Character bio &', accent: 'philosophy',
     alt: 'Manga-style portrait of a developer in glasses and a yellow-accented hoodie',
@@ -74,7 +74,27 @@ export const copy = {
 
 export const projects: readonly Project[] = [
   {
-    id: 'cashlio', index: 'PAGE 01 // FINTECH', badge: 'MOBILE APPLICATION',
+    id: 'digital-safety-hub', index: 'PAGE 01 // DIGITAL SAFETY', badge: 'SIH 2026 SHORTLISTED',
+    title: 'Digital Safety Hub',
+    description: 'A scam-detection platform that checks text, screenshots, and URLs and guides users through reporting and recovery. Its email tools check SPF, DKIM, and DMARC, parse headers, and show sender geolocation.',
+    preview: ['Scam detection', 'Report and recover', 'Email forensics'],
+    stack: ['Next.js', 'TypeScript', 'Tailwind CSS'],
+    repo: 'https://github.com/mdd700155-cloud/-digital-safety-hub',
+    span: 'lg:col-span-7',
+    // TODO: Add a verified live demo.
+  },
+  {
+    id: 'agro-ai', index: 'PAGE 02 // AGRICULTURE', badge: 'FIRST PLACE · COLLEGE HACKATHON',
+    title: 'Agro AI Advisory Platform',
+    description: 'A platform for farmers that detects crop diseases, gives advice based on soil and weather, and looks up live mandi prices.',
+    preview: ['Crop disease detection', 'Soil and weather advice', 'Mandi prices'],
+    stack: [],
+    repo: 'https://github.com/ML-CoderX/agro_ai',
+    span: 'lg:col-span-5',
+    // TODO: Add a verified stack or live demo.
+  },
+  {
+    id: 'cashlio', index: 'PAGE 03 // FINTECH', badge: 'MOBILE APPLICATION',
     title: 'Cashlio — Personal Finance App',
     description: 'Track income and expenses across profiles, review charts and transaction history, and export PDF reports from an Ionic and Angular app.',
     preview: ['Profiles', 'Spending summaries', 'PDF reports'],
@@ -89,7 +109,7 @@ export const projects: readonly Project[] = [
     },
   },
   {
-    id: 'docuai', index: 'PAGE 02 // MED AI', badge: 'CLINICAL SUPPORT PROTOTYPE',
+    id: 'docuai', index: 'PAGE 04 // MED AI', badge: 'CLINICAL SUPPORT PROTOTYPE',
     title: 'DocuAI — Clinical Support Prototype',
     description: 'A team project that takes symptom input, uses a machine learning model to surface possible conditions, and provides Gemini-generated suggestions for clinician review.',
     preview: ['Symptom input', 'Model prediction', 'Gemini suggestions'],
@@ -103,25 +123,11 @@ export const projects: readonly Project[] = [
       notes: ['Scikit-learn powers the prediction model.', 'Gemini adds generated suggestions.', 'Flask supports the backend.'],
     },
   },
-  {
-    id: 'ipl', index: 'PAGE 03 // ML PROBABILITY', badge: 'SPORTS ANALYTICS',
-    title: 'IPL Win Probability Engine',
-    description: 'Explore how second-innings match conditions affect estimated win probabilities for both teams in a Streamlit interface.',
-    preview: ['Second-innings inputs', 'Win probability estimate'],
-    stack: ['Streamlit', 'Scikit-learn', 'Pandas'], repo: 'https://github.com/ML-CoderX/IPL_win_predictor', span: 'lg:col-span-6',
-    // TODO: Restore the demo once https://ipl-win-predictor-2tp0.onrender.com responds.
-  },
-  {
-    id: 'laptop', index: 'PAGE 04 // REGRESSION', badge: 'HARDWARE VALUATION',
-    title: 'Laptop Spec & Price Predictor',
-    description: 'A supervised regression project that estimates a laptop’s price in rupees from hardware specifications entered in Streamlit.',
-    preview: ['Hardware specifications', 'Price estimate'],
-    stack: ['Streamlit', 'Scikit-learn', 'Python'], repo: 'https://github.com/ML-CoderX/Laptop-price-predictor',
-    demo: 'https://laptop-price-predictor-v64x.onrender.com/', span: 'lg:col-span-6',
-  },
 ]
 
 export const timeline = [
+  { badge: 'SMART INDIA HACKATHON 2026', title: 'Digital Safety Hub shortlisted', detail: 'Built a scam-detection platform with a reporting and recovery flow.', note: 'NEXT.JS + TYPESCRIPT' },
+  { badge: 'COLLEGE HACKATHON', title: 'Won first place with Agro AI', detail: 'Built a farmer-facing tool for crop health, growing advice, and live mandi prices.', note: 'FIRST PLACE' },
   { badge: 'MOBILE DEVELOPMENT', title: 'Built Cashlio', detail: 'Developed a personal finance app with separate profiles, spending charts, and PDF reports.', note: 'ANGULAR + IONIC' },
   { badge: 'TEAM PROJECT', title: 'Built DocuAI with a team', detail: 'Combined symptom-based machine learning predictions with Gemini suggestions in a clinical support prototype.', note: 'SCIKIT-LEARN + GEMINI' },
 ]

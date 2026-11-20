@@ -19,7 +19,7 @@ The build renders the shared React page into dist/index.html, then generates the
 ## Edit the site
 
 - Edit src/content.ts for copy, project descriptions, milestones, dossiers, toolkit, accessible labels, metadata, and URLs. Missing URLs leave their controls hidden.
-- Place your résumé at public/Saad_Resume.pdf. The build supplies a valid placeholder PDF when that file is absent.
+- The header and Contact section use public/Saad_Resume.pdf. Replace that file when you update the résumé.
 - The page components are in src/App.tsx. The Stitch Tailwind tokens are in tailwind.config.cjs, and layout and motion styles are in src/style.css.
 - The workstation lives in src/Workstation.tsx and its fallback is public/workstation.svg. The character illustration came from the Stitch export.
 - The chapter sequence is configured in src/scenes.ts. GSAP ScrollTrigger maps native scroll to shot progress in src/scene-scroll.ts. The eye movement and Contact curtains are in src/SceneShots.tsx and src/shot-motion.ts. Each shot reverses with the scroll position. Use `?debug` to see chapter and transition progress.

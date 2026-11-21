@@ -42,6 +42,7 @@ export function Transition({ config }: { config: TransitionConfig }) {
   const [mode, setMode] = useState<SceneMode>('static')
   const [loadCanvas, setLoadCanvas] = useState(false)
   const [failed, setFailed] = useState(false)
+  const wantsCanvas = useRef(false)
   const scroll = useRef<SceneScroll>(null)
   const appliedMode = useRef<SceneMode>('static')
   const playback = useMemo<ScenePlayback>(() => ({
@@ -49,8 +50,12 @@ export function Transition({ config }: { config: TransitionConfig }) {
     origin: { x: .5, y: .5 },
     orb: { x: .5, y: .5, moved: false },
   }), [])
-  const onPaint = useCallback(() => setMode('webgl'), [])
+  const onPaint = useCallback(() => {
+    if (wantsCanvas.current) setMode('webgl')
+  }, [])
   const onFailure = useCallback(() => {
+    if (!wantsCanvas.current) return
+    wantsCanvas.current = false
     setFailed(true)
     setMode('static')
     setLoadCanvas(false)
@@ -62,18 +67,26 @@ export function Transition({ config }: { config: TransitionConfig }) {
     let cancel = () => {}
     function sync() {
       cancel()
+      wantsCanvas.current = false
       setMode('static')
       setLoadCanvas(false)
       if (reduce.matches || failed || !('WebGL2RenderingContext' in window)) return
       cancel = afterOpening(() => afterPaint(() => {
-        if (desktop.matches) setLoadCanvas(true)
-        else setMode(canRenderWebGL() ? 'css' : 'static')
+        if (desktop.matches) {
+          wantsCanvas.current = true
+          setLoadCanvas(true)
+        } else setMode(canRenderWebGL() ? 'css' : 'static')
       }, 0))
     }
     sync()
     reduce.addEventListener('change', sync)
     desktop.addEventListener('change', sync)
-    return () => { cancel(); reduce.removeEventListener('change', sync); desktop.removeEventListener('change', sync) }
+    return () => {
+      wantsCanvas.current = false
+      cancel()
+      reduce.removeEventListener('change', sync)
+      desktop.removeEventListener('change', sync)
+    }
   }, [failed])
 
   useEffect(() => {

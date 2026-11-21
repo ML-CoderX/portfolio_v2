@@ -37,17 +37,20 @@ export function useSakuga() {
       let observer: IntersectionObserver | undefined
       const first = afterPaint(() => {
         enable('button')
+        const upgrades = new Map<Element, 'toast' | 'tooltip'>()
+        const work = document.getElementById('work')
+        const contact = document.getElementById('contact')
+        if (work) upgrades.set(work, 'tooltip')
+        if (contact) upgrades.set(contact, 'toast')
         observer = new IntersectionObserver(entries => {
           for (const entry of entries) {
             if (!entry.isIntersecting) continue
             observer?.unobserve(entry.target)
-            enable(entry.target.id === 'contact' ? 'toast' : 'tooltip')
+            const component = upgrades.get(entry.target)
+            if (component) enable(component)
           }
         }, { rootMargin: '180px 0px' })
-        for (const id of ['work', 'contact']) {
-          const target = document.getElementById(id)
-          if (target) observer.observe(target)
-        }
+        for (const target of upgrades.keys()) observer.observe(target)
       }, matchMedia('(pointer: coarse)').matches ? 2300 : 500)
       cancel = () => { first(); observer?.disconnect() }
     }

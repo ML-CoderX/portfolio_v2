@@ -1,8 +1,9 @@
 import gsap from 'gsap'
+import type { SceneMode } from '../scenes'
 
-export function startProjectMotion(mode: string | undefined) {
+export function startProjectMotion(mode: SceneMode) {
   const panels: { art: HTMLElement; timeline: gsap.core.Timeline }[] = []
-  if (mode !== 'css' && mode !== 'webgl') return { draw: () => {}, stop: () => {} }
+  if (mode === 'static') return { draw: () => {}, stop: () => {} }
   const context = gsap.context(() => {
     document.querySelectorAll<HTMLElement>('[data-project-art]').forEach(art => {
       const timeline = gsap.timeline({ paused: true })

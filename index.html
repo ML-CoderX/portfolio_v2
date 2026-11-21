@@ -3,16 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f6f3ec">
+<meta name="theme-color" content="#f6f3ec" data-storage-key="saad-theme" data-night-color="#171321">
 <noscript><style>.email-box button, .theme-switch { display: none }</style></noscript>
 <!--head-->
 <script>
-try {
-  if (localStorage.getItem('saad-theme') === 'night') {
-    document.documentElement.dataset.theme = 'night';
-    document.querySelector('meta[name="theme-color"]').content = '#171321';
-  }
-} catch {}
+{
+  const theme = document.querySelector('meta[name="theme-color"]');
+  theme.dataset.dayColor = theme.content;
+  try {
+    if (localStorage.getItem(theme.dataset.storageKey) === 'night') {
+      document.documentElement.dataset.theme = 'night';
+      theme.content = theme.dataset.nightColor;
+    }
+  } catch {}
+}
 {
   const root = document.documentElement;
   root.setAttribute('data-opening', '');

@@ -2,11 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { copy } from './content'
 import { loadSakuga, type SakugaToggle } from './sakuga-runtime'
 
-const storageKey = 'saad-theme'
+function themeMeta() {
+  return document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+}
 
 function applyTheme(night: boolean) {
   document.documentElement.dataset.theme = night ? 'night' : 'day'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', night ? '#171321' : '#f6f3ec')
+  const meta = themeMeta()
+  const color = night ? meta?.dataset.nightColor : meta?.dataset.dayColor
+  if (meta && color) meta.content = color
 }
 
 export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
@@ -22,7 +26,7 @@ export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
     choice.current = document.documentElement.dataset.theme === 'night'
     setNight(choice.current)
     function sync(event: StorageEvent) {
-      if (event.key !== storageKey && event.key !== null) return
+      if (event.key !== themeMeta()?.dataset.storageKey && event.key !== null) return
       choice.current = event.newValue === 'night'
       applyTheme(choice.current)
       setNight(choice.current)
@@ -51,7 +55,8 @@ export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
     const next = !choice.current
     choice.current = next
     setNight(next)
-    try { localStorage.setItem(storageKey, next ? 'night' : 'day') } catch { /* Theme still works for this page. */ }
+    const storageKey = themeMeta()?.dataset.storageKey
+    try { if (storageKey) localStorage.setItem(storageKey, next ? 'night' : 'day') } catch { /* Theme still works for this page. */ }
     animation.current?.cancel()
     transition.current?.skipTransition()
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {

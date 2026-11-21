@@ -1,7 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { afterOpening, afterPaint } from './enhancements'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { afterPaint } from './after-paint'
+import { afterOpening } from './opening-screen'
 import { ChapterShot } from './SceneShots'
 import { chapterTransitions, scenes, shotArtwork, type SceneId, type SceneMode, type ScenePlayback, type TransitionConfig } from './scenes'
+
+type SceneScroll = ReturnType<typeof import('./scene-scroll').startSceneScroll>
 
 const SceneCanvas = lazy(() => import('./Workstation').catch(() => ({ default: MissingCanvas })))
 
@@ -14,7 +17,7 @@ export function Scene({ id, className, children }: { id: SceneId; className: str
   const entrance = chapterTransitions.find(transition => transition.to === id)
   return <section id={id} className={className} aria-labelledby={id + '-title'} data-scene={id}>
     {entrance && <ChapterShot shot={entrance.shot} />}
-    {id !== 'hero' && id !== 'about' && <SceneArtwork id={id} />}
+    {id !== 'hero' && scenes[id].layers.length > 0 && <SceneArtwork id={id} />}
     {children}
   </section>
 }
@@ -39,6 +42,8 @@ export function Transition({ config }: { config: TransitionConfig }) {
   const [mode, setMode] = useState<SceneMode>('static')
   const [loadCanvas, setLoadCanvas] = useState(false)
   const [failed, setFailed] = useState(false)
+  const scroll = useRef<SceneScroll>(null)
+  const appliedMode = useRef<SceneMode>('static')
   const playback = useMemo<ScenePlayback>(() => ({
     progress: 0,
     origin: { x: .5, y: .5 },
@@ -82,20 +87,27 @@ export function Transition({ config }: { config: TransitionConfig }) {
       const shift = anchor.getBoundingClientRect().top - top
       if (Math.abs(shift) > 1) window.scrollBy({ top: shift, behavior: 'instant' })
     }
-    window.dispatchEvent(new Event('scene:mode'))
+    appliedMode.current = mode
+    scroll.current?.setMode(mode)
   }, [mode])
 
   useEffect(() => () => { delete document.documentElement.dataset.sceneMode }, [])
 
   useEffect(() => {
     let current = true
-    let stop: (() => void) | undefined
     const cancel = afterPaint(() => {
       void import('./scene-scroll').then(({ startSceneScroll }) => {
-        if (current) stop = startSceneScroll(config, playback)
+        if (!current) return
+        scroll.current = startSceneScroll(config, playback)
+        scroll.current.setMode(appliedMode.current)
       }).catch(() => {})
     }, 0)
-    return () => { current = false; cancel(); stop?.() }
+    return () => {
+      current = false
+      cancel()
+      scroll.current?.dispose()
+      scroll.current = null
+    }
   }, [config, playback])
 
   return <>
@@ -105,7 +117,7 @@ export function Transition({ config }: { config: TransitionConfig }) {
       <img src={shotArtwork.portalRing} alt="" loading="lazy" />
     </div>
     {loadCanvas && <Suspense fallback={null}>
-      <SceneCanvas config={config} playback={playback} onPaint={onPaint} onFailure={onFailure} />
+      <SceneCanvas inkTexture={config.inkTexture} heroId={config.from} playback={playback} onPaint={onPaint} onFailure={onFailure} />
     </Suspense>}
   </>
 }

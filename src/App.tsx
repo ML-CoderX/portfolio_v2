@@ -1,28 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
-import { copy, profile, projects, timeline, toolkit, type Project } from './content'
-import { ActionLink, Chip, ContactActions, LinkEffects, useSakuga } from './sakuga'
+import { copy, profile, timeline, toolkit } from './content'
+import { ActionLink, LinkEffects, useSakuga } from './sakuga'
 import { useEnhancements } from './enhancements'
 import { Scene, SceneArtwork, Transition } from './Scene'
 import { heroToWork } from './scenes'
-import portrait from '../.scene-art/about/portrait.webp'
+import { sceneImage } from './scene-art'
 import { ThemeSwitch } from './ThemeSwitch'
 import { useOpeningScreen } from './opening-screen'
-import { ProjectIllustration } from './ProjectIllustration'
-
-type Chapter = { chapter: string; stamp: string; title: string; accent: string; intro?: string }
-
-function Icon({ name }: { name: string }) {
-  return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>
-}
-
-function ChapterHeading({ chapter, id }: { chapter: Chapter; id: string }) {
-  return <div className="chapter-heading">
-    <div><div className="chapter-pill"><span>{chapter.chapter}</span><b>{chapter.stamp}</b></div>
-      <h2 data-heading id={id}>{chapter.title} <em>{chapter.accent}</em></h2>
-    </div>
-    {chapter.intro && <p>{chapter.intro}</p>}
-  </div>
-}
+import { Work } from './work/Work'
+import { Icon } from './Icon'
+import { ChapterHeading } from './ChapterHeading'
+import { ContactActions } from './ContactActions'
 
 function Navigation({ effectsReady }: { effectsReady: boolean }) {
   return <header className="site-header">
@@ -75,83 +62,10 @@ function Hero() {
           <div className="terminal-bar"><span aria-hidden="true"><i /><i /><i /></span>{h.terminal}</div>
           <div className="terminal-body">
             <ol>{h.steps.map((step, index) => <li key={step} style={{ '--step': index } as React.CSSProperties}><span>{step}</span></li>)}</ol>
-            <svg viewBox="0 0 120 40" aria-hidden="true"><path pathLength="1" d="M3 33 L24 33 L41 24 L65 24 L83 10 L117 10" /><circle cx="3" cy="33" r="3"/><circle cx="65" cy="24" r="3"/><circle cx="117" cy="10" r="3"/></svg>
+            <svg viewBox="0 0 120 40" aria-hidden="true"><path pathLength="1" d="M3 33 L24 33 L41 24 L65 24 L83 10 L117 10" /><circle cx="3" cy="33" r="3"/><circle cx="65" cy="24" r="3"/><circle data-sparkline-end cx="117" cy="10" r="3"/></svg>
           </div>
         </div>
         <span className="art-stamp secondary" data-stamp>{h.badgeTwo}</span>
-      </div>
-    </div>
-  </Scene>
-}
-
-function DossierBody({ project }: { project: Project }) {
-  const dossier = project.dossier!
-  return <div className="dossier-body">
-    <p>{dossier.description}</p>
-    <h4>{copy.blueprint}</h4>
-    <ol className="pipeline">{dossier.stages.map(stage => <li key={stage}>{stage}</li>)}</ol>
-    <ul className="notes">{dossier.notes.map(note => <li key={note}>{note}</li>)}</ul>
-    {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}</a>}
-  </div>
-}
-
-function Dossier({ project }: { project: Project }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const opener = useRef<HTMLButtonElement>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    setReady(typeof HTMLDialogElement !== 'undefined' && 'showModal' in HTMLDialogElement.prototype)
-    const current = dialog.current
-    return () => { if (current?.open) current.close() }
-  }, [ready])
-
-  const title = project.dossier!.title
-  return ready ? <>
-    <button type="button" ref={opener} className="comic-action pink" data-sfx={copy.effects.impact} onClick={() => {
-      dialog.current?.showModal()
-      dialog.current?.querySelector('button')?.focus()
-    }}>
-      <Icon name="folder_open" />{copy.open}<span className="sr-only"> · {project.title}</span>
-    </button>
-    <dialog ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={() => opener.current?.focus()} onKeyDown={event => {
-      if (event.key !== 'Tab') return
-      const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'))
-      const position = controls.findIndex(control => control === document.activeElement)
-      const step = event.shiftKey ? -1 : 1
-      const next = position === -1 ? 0 : (position + step + controls.length) % controls.length
-      event.preventDefault()
-      controls[next]?.focus()
-    }} onClick={event => {
-      const rect = event.currentTarget.getBoundingClientRect()
-      if (event.target === event.currentTarget && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) event.currentTarget.close()
-    }}>
-      <div className="dialog-top"><span>{project.index}</span><button autoFocus type="button" className="comic-action" onClick={() => dialog.current?.close()}>{copy.close}<Icon name="close" /></button></div>
-      <h3 id={project.id + '-dossier'}>{title}</h3>
-      <DossierBody project={project} />
-    </dialog>
-  </> : <details className="dossier-disclosure"><summary className="comic-action pink">{copy.open}</summary><h4>{title}</h4><DossierBody project={project} /></details>
-}
-
-function Work({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
-  return <Scene id="work" className="site-section work-section">
-    <div className="frame">
-      <ChapterHeading chapter={copy.work} id="work-title" />
-      <div className="project-grid">
-        {projects.map(project => <article className={`project panel ${project.span}`} key={project.id} data-reveal>
-          <div className="panel-top"><span>{project.badge}</span><b>{project.index}</b></div>
-          <h3>{project.title}</h3><p>{project.description}</p>
-          <ProjectIllustration project={project.id} />
-          <div className={'project-preview ' + project.id}>
-            {project.preview.map(item => <div key={item}>{item}</div>)}
-          </div>
-          {project.stack.length > 0 && <ul className="chips" aria-label={copy.technologies}>{project.stack.map(item => <li key={item}><Chip title={item} hint={project.title} enhanced={sakuga.tooltip} /></li>)}</ul>}
-          {(project.dossier || project.demo || project.repo) && <div className="action-row">
-            {project.dossier && <Dossier project={project} />}
-            {project.demo && <ActionLink href={project.demo} appearance="pink" sfx={copy.effects.toolkit}><Icon name="launch" />{copy.demo}<span className="sr-only"> · {project.title}</span></ActionLink>}
-            {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>}
-          </div>}
-        </article>)}
       </div>
     </div>
   </Scene>
@@ -163,7 +77,7 @@ function About() {
     <ChapterHeading chapter={a} id="about-title" />
     <div className="about-grid">
       <figure className="character panel" data-reveal>
-        <img loading="lazy" decoding="async" src={portrait} width="640" height="853" alt={a.alt} />
+        <img loading="lazy" decoding="async" src={sceneImage('portrait')} width="640" height="853" alt={a.alt} />
       </figure>
       <div className="bio">
         <blockquote className="panel speech" data-reveal><small>{a.log}</small><p>{a.quote}</p></blockquote>
@@ -188,7 +102,7 @@ function Toolkit() {
   </div></Scene>
 }
 
-function Contact({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
+function Contact({ copyEffect, toast }: { copyEffect: boolean; toast: boolean }) {
   const c = copy.contact
   return <Scene id="contact" className="contact site-section section-tone"><div className="frame">
     <div className="chapter-pill">{c.chapter} <b>{c.stamp}</b></div>
@@ -196,7 +110,7 @@ function Contact({ sakuga }: { sakuga: ReturnType<typeof useSakuga> }) {
       <span className="contact-stamp">{c.badge}</span>
       <h2 id="contact-title" data-heading>{c.title} <em>{c.accent}</em></h2>
       <p>{c.intro}</p>
-      <ContactActions enhanced={sakuga} />
+      <ContactActions copyEffect={copyEffect} toastEffect={toast} />
       <div className="action-row">{profile.socials.map(link => <a className="comic-action" key={link.href} href={link.href}>{link.label}</a>)}
         <ActionLink appearance="pink" href={profile.resume} sfx={copy.effects.download} download><Icon name="download" />{copy.download}</ActionLink></div>
     </div>
@@ -210,7 +124,7 @@ export function App() {
   return <>
     <Navigation effectsReady={sakuga.button} />
     <LinkEffects ready={sakuga.button} />
-    <main id="main" tabIndex={-1}><Hero /><Work sakuga={sakuga} /><About /><Toolkit /><Contact sakuga={sakuga} /></main>
+    <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
     <Transition config={heroToWork} />
     <footer className="footer"><div className="frame"><p>{copy.footer}</p><nav aria-label={copy.contact.title}>{profile.socials.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href={'mailto:' + profile.email}>{copy.email}</a></nav><a className="comic-action" href="#hero"><Icon name="arrow_upward" />{copy.top}</a></div></footer>
   </>

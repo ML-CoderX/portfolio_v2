@@ -1,35 +1,7 @@
 import { useEffect } from 'react'
-
-export function afterPaint(callback: () => void, delay = 500) {
-  let timer = 0
-  let frame = 0
-  let paints: PerformanceObserver | undefined
-  function schedule() {
-    paints?.disconnect()
-    timer = window.setTimeout(callback, delay)
-  }
-  if (performance.getEntriesByName('first-contentful-paint').length) schedule()
-  else if (PerformanceObserver.supportedEntryTypes.includes('paint')) {
-    paints = new PerformanceObserver(list => {
-      if (list.getEntries().some(entry => entry.name === 'first-contentful-paint')) schedule()
-    })
-    paints.observe({ type: 'paint', buffered: true })
-  } else {
-    frame = requestAnimationFrame(() => { frame = requestAnimationFrame(schedule) })
-  }
-  return () => { paints?.disconnect(); cancelAnimationFrame(frame); clearTimeout(timer) }
-}
-
-export function afterOpening(callback: () => () => void) {
-  if (!document.documentElement.hasAttribute('data-opening')) return callback()
-  let cancel: (() => void) | undefined
-  const open = () => { cancel = callback() }
-  window.addEventListener('opening:complete', open, { once: true })
-  return () => {
-    window.removeEventListener('opening:complete', open)
-    cancel?.()
-  }
-}
+import { afterPaint } from './after-paint'
+import { afterOpening } from './opening-screen'
+import { getSakugaEffects } from './sakuga-runtime'
 
 export function useEnhancements() {
   useEffect(() => {
@@ -49,7 +21,7 @@ export function useEnhancements() {
       last = now
       pointerFrame = requestAnimationFrame(() => {
         pointerFrame = 0
-        const fx = window.SakugaFX
+        const fx = getSakugaEffects()
         if (!fx || fx.calm || document.hidden) return
         particles.push({ x: event.clientX, y: event.clientY, born: performance.now() })
         trail ??= fx.persist(() => {

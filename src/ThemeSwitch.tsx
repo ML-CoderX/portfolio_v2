@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { copy } from './content'
-import { loadSakuga, type SakugaToggle } from './sakuga'
+import { loadSakuga, type SakugaToggle } from './sakuga-runtime'
 
 const storageKey = 'saad-theme'
 

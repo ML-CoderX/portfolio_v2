@@ -1,8 +1,17 @@
 import { useEffect } from 'react'
-import { afterPaint } from './enhancements'
-import { loadSakuga } from './sakuga'
+import { afterPaint } from './after-paint'
+import { getSakugaEffects, loadSakuga, type SakugaProgress } from './sakuga-runtime'
 
-type SakugaProgress = HTMLElement & { set(value: number, instant?: boolean): void }
+export function afterOpening(callback: () => () => void) {
+  if (!document.documentElement.hasAttribute('data-opening')) return callback()
+  let cancel: (() => void) | undefined
+  const open = () => { cancel = callback() }
+  window.addEventListener('opening:complete', open, { once: true })
+  return () => {
+    window.removeEventListener('opening:complete', open)
+    cancel?.()
+  }
+}
 
 export function useOpeningScreen() {
   useEffect(() => {
@@ -65,9 +74,7 @@ export function useOpeningScreen() {
 
     const cancelPaint = componentReady ? () => {} : afterPaint(() => {
       upgradeDeadline = window.setTimeout(() => finishUpgrade(false), 650)
-      // Load our shared, canvas-aware Sakuga core before registering progress.
-      void loadSakuga('button').then(installed => installed && active && !componentReady && loadSakuga('progress'))
-        .then(finishUpgrade)
+      void loadSakuga('progress').then(finishUpgrade)
     }, 0)
 
     function cleanup() {
@@ -75,7 +82,7 @@ export function useOpeningScreen() {
       cancelPaint()
       clearTimeout(upgradeDeadline)
       clearTimeout(finishDeadline)
-      if (enhanced) window.SakugaFX?.clearFront?.()
+      if (enhanced) getSakugaEffects()?.clearFront?.()
       sakuga?.removeEventListener('sakuga:done', holdCompletionFrame)
       window.removeEventListener('opening:complete', cleanup)
     }

@@ -1,4 +1,3 @@
-export type Link = { label: string; href: string }
 export type Project = {
   id: string
   index: string
@@ -36,12 +35,11 @@ export const copy = {
   skip: 'Skip to content', nav: 'Main navigation', menu: 'Menu',
   ready: '[CH.01 // READY]', resume: 'Résumé', download: 'Download full dossier',
   github: 'GitHub', demo: 'Live demo', open: 'Open dossier', close: 'Close dossier',
-  blueprint: 'Architecture blueprint', detail: 'Inspect blueprint', technologies: 'Technologies',
-  top: 'Back to top', email: 'Email', copy: 'Copy', copyEmail: 'Copy email',
+  blueprint: 'Architecture blueprint', technologies: 'Technologies',
+  top: 'Back to top', email: 'Email', copy: 'Copy',
   copied: 'Email copied!', copyFailed: 'Email selected. Use your device’s copy command.',
-  scrollProgress: 'Reading progress', footer: '© Saad AR — Crafted in cel-shaded code',
+  footer: '© Saad AR — Crafted in cel-shaded code',
   notFound: 'Page not found', home: 'Return to portfolio', missing: 'This page is missing.',
-  resumePlaceholder: 'Resume placeholder. Replace this file before launch.',
   navLinks: [
     { label: 'Work', href: '#work' }, { label: 'About', href: '#about' },
     { label: 'Experience', href: '#toolkit' }, { label: 'Contact', href: '#contact' },

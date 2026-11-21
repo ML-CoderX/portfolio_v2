@@ -6,8 +6,9 @@ import {
   PerspectiveCamera, RedFormat, Scene, ShaderMaterial, SRGBColorSpace, TextureLoader, Vector2,
   Vector4, WebGLRenderTarget,
 } from 'three'
-import type { ScenePlayback, TransitionConfig } from './scenes'
+import type { ScenePlayback } from './scenes'
 import { phase } from './shot-motion'
+import { subscribeToSakugaSurface } from './sakuga-runtime'
 type Callbacks = { onPaint: () => void; onFailure: () => void }
 
 class CanvasBoundary extends Component<{ onFailure: () => void; children: ReactNode }, { failed: boolean }> {
@@ -156,7 +157,7 @@ const inkFragment = `
   }
 `
 
-type CanvasProps = Callbacks & { playback: ScenePlayback; config: TransitionConfig }
+type CanvasProps = Callbacks & { playback: ScenePlayback; inkTexture: string; heroId: string }
 
 function screenMaterial(fragmentShader: string, uniforms: ShaderMaterial['uniforms']) {
   return new ShaderMaterial({
@@ -165,7 +166,7 @@ function screenMaterial(fragmentShader: string, uniforms: ShaderMaterial['unifor
   })
 }
 
-function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
+function SceneFrame({ playback, inkTexture, heroId, onPaint, onFailure }: CanvasProps) {
   const { gl, size, invalidate, scene, camera } = useThree()
   const painted = useRef(false)
   const laptopScene = useMemo(() => new Scene(), [])
@@ -211,18 +212,18 @@ function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
   useEffect(() => () => materials.forEach(material => material.dispose()), [materials])
   useEffect(() => {
     let active = true
-    const texture = new TextureLoader().load(config.shader.texture, loaded => {
+    const texture = new TextureLoader().load(inkTexture, loaded => {
       if (!active) return
       ink.ink.value = loaded
       ink.textureReady.value = 1
       invalidate()
     })
     return () => { active = false; texture.dispose(); ink.ink.value = null; ink.textureReady.value = 0 }
-  }, [config.shader.texture, ink, invalidate])
+  }, [inkTexture, ink, invalidate])
 
   useEffect(() => {
     slot.current = document.querySelector('.workstation')
-    const source = document.getElementById(config.from)
+    const source = document.getElementById(heroId)
     hero.current = source
     playback.invalidate = invalidate
     function move(event: PointerEvent) {
@@ -241,11 +242,10 @@ function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
       source?.removeEventListener('pointerleave', leave)
       gl.domElement.removeEventListener('webglcontextlost', lost)
     }
-  }, [config.from, gl, invalidate, onFailure, playback])
+  }, [heroId, gl, invalidate, onFailure, playback])
 
   useEffect(() => {
-    function connect() {
-      window.SakugaFX?.setSurfaceConsumer(canvas => {
+    const disconnect = subscribeToSakugaSurface(canvas => {
         if (effects.image.value?.image !== canvas) {
           effects.image.value?.dispose()
           effects.image.value = new CanvasTexture(canvas)
@@ -253,13 +253,9 @@ function SceneFrame({ playback, config, onPaint, onFailure }: CanvasProps) {
         }
         effects.image.value.needsUpdate = true
         invalidate()
-      })
-    }
-    connect()
-    window.addEventListener('sakuga:ready', connect)
+    })
     return () => {
-      window.removeEventListener('sakuga:ready', connect)
-      window.SakugaFX?.setSurfaceConsumer(null)
+      disconnect()
       effects.image.value?.dispose()
       effects.image.value = null
     }

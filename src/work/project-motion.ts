@@ -15,15 +15,13 @@ export function startProjectMotion(mode: string | undefined) {
       timeline.fromTo(art.querySelectorAll('[data-art-layer="background"]'), { y: 6 }, { y: 0, ease: 'none' }, 0)
       timeline.fromTo(art.querySelectorAll('[data-art-layer="middle"]'), { y: 12 }, { y: 0, ease: 'none' }, 0)
       timeline.fromTo(art.querySelectorAll('[data-art-layer="foreground"]'), { y: 24 }, { y: 0, ease: 'none' }, 0)
-      const actions = {
-        lens: { x: -48, rotation: -8 }, leaf: { rotation: -9 },
-        scan: { scale: 1.18, opacity: .25 }, receipt: { x: -55, rotation: -12 },
-        model: { x: -30, rotation: -8 }, review: { x: -90, rotation: -15 },
-      }
-      for (const [name, from] of Object.entries(actions)) {
-        const layer = art.querySelector(`[data-art-action="${name}"]`)
-        if (layer) timeline.fromTo(layer, { ...from, transformOrigin: '50% 70%' },
-          { x: 0, rotation: 0, scale: 1, opacity: 1, ease: 'none' }, 0)
+      for (const layer of art.querySelectorAll<SVGElement>('[data-art-action]')) {
+        const { artX, artRotation, artScale, artOpacity } = layer.dataset
+        timeline.fromTo(layer, {
+          x: Number(artX ?? 0), rotation: Number(artRotation ?? 0),
+          scale: Number(artScale ?? 1), opacity: Number(artOpacity ?? 1),
+          transformOrigin: '50% 70%',
+        }, { x: 0, rotation: 0, scale: 1, opacity: 1, ease: 'none' }, 0)
       }
     })
   })

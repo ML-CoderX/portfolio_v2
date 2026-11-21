@@ -1,24 +1,20 @@
-import character from '../.scene-art/hero/character.webp'
-import inkSpill from '../.scene-art/hero/ink-spill.webp'
-import backdrop from '../.scene-art/work/backdrop.webp'
-import portalRing from '../.scene-art/work/portal-ring.webp'
-import eyesPanel from '../.scene-art/about/eyes-panel.webp'
-import shelf from '../.scene-art/toolkit/shelf.webp'
-import stage from '../.scene-art/contact/stage.webp'
+import { sceneImage } from './scene-art'
+
+const portalRing = sceneImage('portalRing')
 
 type Layer = { name: string; src: string }
 
 export const scenes = {
   hero: { chapter: '01', layers: [
-    { name: 'hero-character', src: character },
+    { name: 'hero-character', src: sceneImage('character') },
   ] },
   work: { chapter: '02', layers: [
-    { name: 'work-backdrop', src: backdrop },
+    { name: 'work-backdrop', src: sceneImage('workBackdrop') },
     { name: 'work-portal', src: portalRing },
   ] },
   about: { chapter: '03', layers: [] },
-  toolkit: { chapter: '04', layers: [{ name: 'toolkit-shelf', src: shelf }] },
-  contact: { chapter: '05', layers: [{ name: 'contact-stage', src: stage }] },
+  toolkit: { chapter: '04', layers: [{ name: 'toolkit-shelf', src: sceneImage('toolkitShelf') }] },
+  contact: { chapter: '05', layers: [{ name: 'contact-stage', src: sceneImage('contactStage') }] },
 } satisfies Record<string, { chapter: string; layers: Layer[] }>
 
 export type SceneId = keyof typeof scenes
@@ -29,8 +25,7 @@ export type TransitionConfig = {
   to: SceneId
   start: string
   end: string
-  shader: { kind: 'ink-spill'; texture: string }
-  mobile: 'clip-fade'
+  inkTexture: string
 }
 
 export const heroToWork: TransitionConfig = {
@@ -38,18 +33,17 @@ export const heroToWork: TransitionConfig = {
   to: 'work',
   start: 'clamp(top 85%)',
   end: 'top 25%',
-  shader: { kind: 'ink-spill', texture: inkSpill },
-  mobile: 'clip-fade',
+  inkTexture: sceneImage('inkSpill'),
 }
 
 export const chapterTransitions = [
-  { from: 'work', to: 'about', shot: 'eyes', start: 'top 88%', end: 'bottom 33%' },
-  { from: 'toolkit', to: 'contact', shot: 'curtains', start: 'top 92%', end: 'top 25%' },
+  { from: 'work', to: 'about', shot: 'eyes', trigger: 'shot', start: 'top 88%', end: 'bottom 33%' },
+  { from: 'toolkit', to: 'contact', shot: 'curtains', trigger: 'section', start: 'top 92%', end: 'top 25%' },
 ] as const satisfies readonly {
-  from: SceneId; to: SceneId; shot: string; start: string; end: string
+  from: SceneId; to: SceneId; shot: string; trigger: 'shot' | 'section'; start: string; end: string
 }[]
 
-export const shotArtwork = { eyesPanel, portalRing }
+export const shotArtwork = { eyesPanel: sceneImage('eyesPanel'), portalRing }
 
 export type ScenePlayback = {
   progress: number

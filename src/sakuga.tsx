@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState, type DetailedHTMLProps, type HTMLAttributes, type ReactNode } from 'react'
-import { copy, profile } from './content'
-import { afterPaint } from './enhancements'
-
-type SakugaButton = HTMLElement & { done: () => void; impact: (origin?: HTMLElement) => void }
-type SakugaToast = HTMLElement & { show: (message: string) => void }
-export type SakugaToggle = HTMLElement & { checked: boolean; flip: () => void }
-type Particle = { dead?: boolean }
+import { copy } from './content'
+import { afterPaint } from './after-paint'
+import { getSakugaEffects, loadSakuga, type SakugaButton, type SakugaToast, type SakugaToggle } from './sakuga-runtime'
 type Props<T extends HTMLElement> = DetailedHTMLProps<HTMLAttributes<T>, T>
 declare module 'react' {
   // JSX custom elements are declared through React's namespace augmentation.
@@ -19,40 +15,10 @@ declare module 'react' {
     }
   }
 }
-declare global {
-  interface Window {
-    SakugaFX?: {
-      persist: (draw: () => void) => Particle
-      g: CanvasRenderingContext2D
-      calm: boolean
-      clearFront?: () => void
-      setSurfaceConsumer: (consumer: ((canvas: HTMLCanvasElement) => void) | null) => void
-    }
-  }
-}
-
-type Component = 'button' | 'toast' | 'tooltip' | 'toggle' | 'progress'
-const loads = new Map<Component, Promise<boolean>>()
-export function loadSakuga(component: Component) {
-  const previous = loads.get(component)
-  if (previous) return previous
-  const loading = new Promise<boolean>(resolve => {
-    const script = document.createElement('script')
-    script.src = '/sakuga-vfx/' + component + '.js'
-    script.onload = () => {
-      const installed = !!customElements.get('sakuga-' + component)
-      if (installed) window.dispatchEvent(new Event('sakuga:ready'))
-      resolve(installed)
-    }
-    script.onerror = () => resolve(false)
-    document.head.append(script)
-  })
-  loads.set(component, loading)
-  return loading
-}
+type SakugaReadiness = { button: boolean; toast: boolean; tooltip: boolean }
 
 export function useSakuga() {
-  const [ready, setReady] = useState({ button: false, toast: false, tooltip: false })
+  const [ready, setReady] = useState<SakugaReadiness>({ button: false, toast: false, tooltip: false })
   useEffect(() => {
     const motion = matchMedia('(prefers-reduced-motion: reduce)')
     let cancel = () => {}
@@ -63,11 +29,8 @@ export function useSakuga() {
         setReady({ button: false, toast: false, tooltip: false })
         return
       }
-      function enable(component: Component) {
-        void loadSakuga('button').then(async button => {
-          if (current && !motion.matches) setReady(value => ({ ...value, button }))
-          if (component === 'button' || motion.matches) return
-          const installed = await loadSakuga(component)
+      function enable(component: keyof SakugaReadiness) {
+        void loadSakuga(component).then(installed => {
           if (current && !motion.matches) setReady(value => ({ ...value, [component]: installed }))
         })
       }
@@ -108,7 +71,7 @@ export function LinkEffects({ ready }: { ready: boolean }) {
     if (!ready) return
     const presses = new WeakMap<HTMLElement, Animation>()
     function click(event: MouseEvent) {
-      if (event.button !== 0 || !(event.target instanceof Element) || window.SakugaFX?.calm) return
+      if (event.button !== 0 || !(event.target instanceof Element) || getSakugaEffects()?.calm) return
       const control = event.target.closest<HTMLElement>('[data-link-impact]')
       if (!control) return
       effect.current?.impact(control)
@@ -133,53 +96,4 @@ export function Chip({ title, hint, enhanced }: { title: string; hint: string; e
   return enhanced
     ? <sakuga-tooltip className="chip" text={hint} label={title}>{title}</sakuga-tooltip>
     : <span className="chip" title={hint}>{title}</span>
-}
-
-export function ContactActions({ enhanced }: { enhanced: ReturnType<typeof useSakuga> }) {
-  const email = useRef<HTMLInputElement>(null)
-  const button = useRef<SakugaButton>(null)
-  const toast = useRef<SakugaToast>(null)
-  const [status, setStatus] = useState('')
-  const useCustomButton = enhanced.button
-
-  useEffect(() => {
-    const element = button.current
-    function activate() { email.current?.form?.requestSubmit() }
-    element?.addEventListener('click', activate)
-    return () => element?.removeEventListener('click', activate)
-  }, [useCustomButton])
-
-  async function copyEmail() {
-    setStatus('')
-    let copied = false
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(profile.email)
-        copied = true
-      }
-    } catch { /* Try the legacy clipboard action below. */ }
-    if (!copied && email.current) {
-      email.current.focus()
-      email.current.select()
-      email.current.setSelectionRange(0, profile.email.length)
-      try { copied = document.execCommand('copy') } catch { /* Selection stays available. */ }
-    }
-    if (copied) {
-      button.current?.done()
-      if (toast.current) toast.current.show(copy.copied)
-      else setStatus(copy.copied)
-    } else setStatus(copy.copyFailed)
-  }
-
-  return <div className="contact-controls">
-    <form className="email-box" action={'mailto:' + profile.email} onSubmit={event => { event.preventDefault(); void copyEmail() }}>
-      <input aria-label={copy.email} ref={email} readOnly value={profile.email} onFocus={event => event.currentTarget.select()} />
-      {useCustomButton
-        ? <sakuga-button ref={button} data-sfx={copy.effects.impact}>{copy.copy}</sakuga-button>
-        : <button type="submit" className="comic-action pink" data-sfx={copy.effects.impact}>{copy.copy}</button>}
-    </form>
-    <a className="email-link" href={'mailto:' + profile.email}>{copy.email}</a>
-    <p className="copy-status" role="status">{status}</p>
-    {enhanced.toast && <sakuga-toast ref={toast} />}
-  </div>
 }

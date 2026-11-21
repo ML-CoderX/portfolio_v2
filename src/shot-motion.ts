@@ -3,8 +3,7 @@ export function phase(progress: number, start: number, end: number) {
   return value * value * (3 - 2 * value)
 }
 
-export function preparePortal() {
-  const portal = document.querySelector<HTMLElement>('[data-portal-shot]')
+export function preparePortal(portal: HTMLElement | null) {
   let previous = -1
 
   return (progress: number) => {

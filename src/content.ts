@@ -31,6 +31,7 @@ export const profile = {
 }
 
 export const copy = {
+  motion: { label: 'Motion', on: 'On', off: 'Off' },
   theme: { label: 'Night mode', day: 'Day', night: 'Night' },
   skip: 'Skip to content', nav: 'Main navigation', menu: 'Menu',
   ready: '[CH.01 // READY]', resume: 'Résumé', download: 'Download full dossier',

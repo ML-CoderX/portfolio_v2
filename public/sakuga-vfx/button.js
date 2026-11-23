@@ -92,7 +92,17 @@ canvas.sakuga-fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:
 document.head.append(Object.assign(document.createElement('style'), { textContent: pageCss }));
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-let calm = reduce.matches; reduce.addEventListener?.('change', (e) => { calm = e.matches; });
+function useCalmMotion() {
+  const choice = document.documentElement.dataset.motion;
+  return choice ? choice === 'off' : reduce.matches;
+}
+let calm = useCalmMotion();
+function syncMotion() {
+  calm = useCalmMotion();
+  if (calm) clearFront();
+}
+reduce.addEventListener?.('change', syncMotion);
+new MutationObserver(syncMotion).observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
 
 // ───────── layers ─────────
 // The front layer is one fixed canvas over the whole page. A component can also have a back layer: a canvas inside it, behind the control.

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-motion-key="saad-motion">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f6f3ec" data-storage-key="saad-theme" data-night-color="#171321">
-<noscript><style>.email-box button, .theme-switch { display: none }</style></noscript>
+<noscript><style>.email-box button, .theme-switch, .motion-switch { display: none }</style></noscript>
 <!--head-->
 <script>
 {
@@ -19,17 +19,23 @@
 }
 {
   const root = document.documentElement;
-  root.setAttribute('data-opening', '');
-  const finish = () => window.dispatchEvent(new Event('opening:complete'));
-  const deadline = setTimeout(finish, 3600);
-  const skip = event => { if (event.key === 'Tab' || event.key === 'Escape') finish(); };
-  window.addEventListener('keydown', skip, true);
-  window.addEventListener('opening:complete', () => {
-    clearTimeout(deadline);
-    root.removeAttribute('data-opening');
-    document.getElementById('opening-screen')?.remove();
-    window.removeEventListener('keydown', skip, true);
-  }, { once: true });
+  let choice;
+  try { choice = localStorage.getItem(root.dataset.motionKey); } catch {}
+  root.dataset.motion = choice === 'on' || choice === 'off' ? choice :
+    matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'on';
+  if (root.dataset.motion === 'on') {
+    root.setAttribute('data-opening', '');
+    const finish = () => window.dispatchEvent(new Event('opening:complete'));
+    const deadline = setTimeout(finish, 3600);
+    const skip = event => { if (event.key === 'Tab' || event.key === 'Escape') finish(); };
+    window.addEventListener('keydown', skip, true);
+    window.addEventListener('opening:complete', () => {
+      clearTimeout(deadline);
+      root.removeAttribute('data-opening');
+      document.getElementById('opening-screen')?.remove();
+      window.removeEventListener('keydown', skip, true);
+    }, { once: true });
+  }
 }
 </script>
 </head>

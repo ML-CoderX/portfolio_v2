@@ -13,17 +13,17 @@ export function afterOpening(callback: () => () => void) {
   }
 }
 
-export function useOpeningScreen() {
+export function useOpeningScreen(motion: boolean) {
   useEffect(() => {
+    if (!motion || !document.documentElement.hasAttribute('data-opening')) return
     const screen = document.getElementById('opening-screen')
     const meter = screen?.querySelector<HTMLElement>('.opening-meter')
     const fallback = meter?.querySelector('progress')
     const sakuga = meter?.querySelector<SakugaProgress>('sakuga-progress')
     if (!meter || !fallback || !sakuga) return
 
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)')
     let enhanced = false
-    let componentReady = reduce.matches
+    let componentReady = false
     let assetsReady = false
     let active = true
     let upgradeDeadline = 0
@@ -33,7 +33,7 @@ export function useOpeningScreen() {
     const finishWhenReady = () => {
       if (!active || !assetsReady || !componentReady) return
       fallback.value = 1
-      if (!enhanced || reduce.matches) {
+      if (!enhanced) {
         dismiss()
         return
       }
@@ -53,7 +53,7 @@ export function useOpeningScreen() {
       if (!active || componentReady) return
       clearTimeout(upgradeDeadline)
       componentReady = true
-      if (installed && !reduce.matches) {
+      if (installed) {
         enhanced = true
         sakuga.set(fallback.value, true)
         meter.dataset.enhanced = ''
@@ -72,7 +72,7 @@ export function useOpeningScreen() {
       finishWhenReady()
     })
 
-    const cancelPaint = componentReady ? () => {} : afterPaint(() => {
+    const cancelPaint = afterPaint(() => {
       upgradeDeadline = window.setTimeout(() => finishUpgrade(false), 650)
       void loadSakuga('progress').then(finishUpgrade)
     }, 0)
@@ -89,5 +89,5 @@ export function useOpeningScreen() {
 
     window.addEventListener('opening:complete', cleanup, { once: true })
     return cleanup
-  }, [])
+  }, [motion])
 }

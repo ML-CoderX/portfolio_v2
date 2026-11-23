@@ -23,6 +23,7 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
   const dialog = useRef<HTMLDialogElement>(null)
   const close = useRef<HTMLButtonElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
+  const openedAt = useRef(0)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -31,7 +32,19 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
     return () => { if (current?.open) current.close() }
   }, [ready])
 
-  const openedAt = useRef(0)
+  function restoreFocus() {
+    const button = opener.current
+    if (!button || document.querySelector('dialog[open]')) return
+    if (Math.abs(scrollY - openedAt.current) > 1) {
+      window.scrollTo({ top: openedAt.current, behavior: 'instant' })
+    }
+    button.dispatchEvent(new Event('studio:restore-project', { bubbles: true }))
+    button.focus({ preventScroll: true })
+    // If native focus restoration temporarily crossed a beat boundary, wait for the card to become active again.
+    if (document.activeElement !== button) requestAnimationFrame(() => {
+      if (!document.querySelector('dialog[open]')) button.focus({ preventScroll: true })
+    })
+  }
   const { title } = dossier
   return ready ? <>
     <button type="button" ref={opener} className="comic-action pink" data-sfx={copy.effects.impact} onClick={() => {
@@ -41,7 +54,7 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
     }}>
       <Icon name="folder_open" />{copy.open}<span className="sr-only"> · {project.title}</span>
     </button>
-    {createPortal(<dialog data-lenis-prevent ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={() => { window.scrollTo({ top: openedAt.current, behavior: 'instant' }); opener.current?.focus({ preventScroll: true }) }} onKeyDown={event => {
+    {createPortal(<dialog data-lenis-prevent ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={restoreFocus} onKeyDown={event => {
       if (event.key !== 'Tab') return
       const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'))
       const position = controls.findIndex(control => control === document.activeElement)

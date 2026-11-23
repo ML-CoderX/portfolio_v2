@@ -33,7 +33,7 @@ async function verifyTheme(page, name) {
   const theme = page.getByRole('switch', { name: 'Night mode' })
   await page.locator('.theme-toggle-art sakuga-toggle').waitFor()
   assert.equal(await theme.getAttribute('aria-checked'), 'false')
-  assert.equal(await page.getByRole('switch').count(), 1)
+  assert.equal(await theme.count(), 1)
   await theme.press('Space')
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'night')
   assert.equal(await theme.getAttribute('aria-checked'), 'true')
@@ -49,13 +49,35 @@ async function verifyTheme(page, name) {
   assert.equal(await theme.getAttribute('aria-checked'), 'false')
 }
 
+async function verifyMotionSwitch(page) {
+  const motion = page.getByRole('switch', { name: 'Motion', exact: true })
+  await page.locator('.r3f-layer canvas').waitFor()
+  await motion.press('Space')
+  await page.locator('.r3f-layer').waitFor({ state: 'detached' })
+  assert.equal(await motion.getAttribute('aria-checked'), 'false')
+  assert.equal(await page.locator('#work article:not([inert])').count(), 4)
+  assert.equal(await page.locator('.studio-screen').evaluate(node => node.style.width), '')
+  const requests = []
+  const record = request => requests.push(request.url())
+  page.on('request', record)
+  await page.reload()
+  await motion.waitFor()
+  await page.waitForFunction(() => document.querySelector('.motion-switch').getAttribute('aria-checked') === 'false')
+  assert.equal(await page.locator('#opening-screen').isVisible(), false)
+  assert.ok(!requests.some(url => /Workstation-|scene-scroll-|sakuga-vfx/.test(url)))
+  page.off('request', record)
+  await motion.press('Space')
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-studio'))
+  assert.equal(await motion.getAttribute('aria-checked'), 'true')
+}
+
 async function interact(browser, name, options = {}) {
   const page = await browser.newPage(options)
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   const responses = []
   page.on('response', response => responses.push(response.url()))
-  await page.goto(new URL('?debug', baseURL).href)
+  await page.goto(new URL('?debug', baseURL).href, { waitUntil: 'domcontentloaded' })
   await page.getByRole('heading', { level: 1, name: 'Saad AR' }).waitFor()
   await page.waitForFunction(() => !!customElements.get('sakuga-button'))
   await page.waitForFunction(() => document.documentElement.hasAttribute('data-studio'))
@@ -113,6 +135,7 @@ async function interact(browser, name, options = {}) {
   assert.ok(await page.locator('.r3f-layer canvas, canvas.sakuga-fx').count() <= 1)
   await verifyScenes(page, name, options.hasTouch)
   await verifyTheme(page, name)
+  await verifyMotionSwitch(page)
   assert.deepEqual(errors, [])
   await page.close()
 }
@@ -131,11 +154,13 @@ async function fallbacks(browser) {
   const requests = []
   reduced.on('request', request => requests.push(request.url()))
   await reduced.goto(baseURL)
-  await reduced.locator('#opening-screen').waitFor({ state: 'detached' })
+  await reduced.locator('#opening-screen').waitFor({ state: 'hidden' })
+  await reduced.waitForFunction(() => document.querySelector('.motion-switch').getAttribute('aria-checked') === 'false')
   await reduced.getByRole('button', { name: 'Open dossier · Cashlio' }).waitFor()
   await reduced.locator('.closed-fallback').waitFor()
   assert.equal(await reduced.locator('canvas').count(), 0)
-  assert.equal(await reduced.locator('[data-chapter-shot]').filter({ visible: true }).count(), 0)
+  await reduced.locator('#about .about-eyes img').waitFor({ state: 'visible' })
+  await reduced.locator('#contact .contact-stage').waitFor({ state: 'visible' })
   assert.ok(!requests.some(url => url.includes('/sakuga-vfx/') || url.includes('/Workstation-')))
   await reduced.getByRole('switch', { name: 'Night mode' }).click()
   assert.equal(await reduced.locator('html').getAttribute('data-theme'), 'night')
@@ -179,7 +204,6 @@ async function verifyOpeningScreen(browser, name) {
     await page.goto(baseURL, { waitUntil: 'domcontentloaded' })
     const opening = page.locator('#opening-screen')
     await opening.waitFor({ state: 'visible' })
-    await opening.locator('[data-enhanced] sakuga-progress').waitFor({ state: 'visible' })
     await opening.getByRole('progressbar', { name: 'Portfolio loading progress' }).waitFor()
     assert.equal(await page.locator('.hero-entrance, .r3f-layer').count(), 0)
     releaseImage()

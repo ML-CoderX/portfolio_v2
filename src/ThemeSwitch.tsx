@@ -13,7 +13,7 @@ function applyTheme(night: boolean) {
   if (meta && color) meta.content = color
 }
 
-export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
+export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; motion: boolean }) {
   const [night, setNight] = useState(false)
   const [painted, setPainted] = useState(false)
   const toggle = useRef<SakugaToggle>(null)
@@ -51,6 +51,12 @@ export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
     if (toggle.current && toggle.current.checked !== night) toggle.current.checked = night
   }, [night, showArt])
 
+  useEffect(() => {
+    if (motion) return
+    animation.current?.cancel()
+    transition.current?.skipTransition()
+  }, [motion])
+
   function flip(button: HTMLButtonElement) {
     const next = !choice.current
     choice.current = next
@@ -59,7 +65,7 @@ export function ThemeSwitch({ effectsReady }: { effectsReady: boolean }) {
     try { if (storageKey) localStorage.setItem(storageKey, next ? 'night' : 'day') } catch { /* Theme still works for this page. */ }
     animation.current?.cancel()
     transition.current?.skipTransition()
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!motion) {
       applyTheme(next)
       return
     }

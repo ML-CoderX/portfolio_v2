@@ -16,49 +16,42 @@ declare module 'react' {
   }
 }
 type SakugaReadiness = { button: boolean; toast: boolean; tooltip: boolean }
+const effectsOff: SakugaReadiness = { button: false, toast: false, tooltip: false }
 
-export function useSakuga() {
-  const [ready, setReady] = useState<SakugaReadiness>({ button: false, toast: false, tooltip: false })
+export function useSakuga(motion: boolean) {
+  const [ready, setReady] = useState(effectsOff)
   useEffect(() => {
-    const motion = matchMedia('(prefers-reduced-motion: reduce)')
-    let cancel = () => {}
-    let current = true
-    function sync() {
-      cancel()
-      if (motion.matches) {
-        setReady({ button: false, toast: false, tooltip: false })
-        return
-      }
-      function enable(component: keyof SakugaReadiness) {
-        void loadSakuga(component).then(installed => {
-          if (current && !motion.matches) setReady(value => ({ ...value, [component]: installed }))
-        })
-      }
-      let observer: IntersectionObserver | undefined
-      const first = afterPaint(() => {
-        enable('button')
-        const upgrades = new Map<Element, 'toast' | 'tooltip'>()
-        const work = document.getElementById('work')
-        const contact = document.getElementById('contact')
-        if (work) upgrades.set(work, 'tooltip')
-        if (contact) upgrades.set(contact, 'toast')
-        observer = new IntersectionObserver(entries => {
-          for (const entry of entries) {
-            if (!entry.isIntersecting) continue
-            observer?.unobserve(entry.target)
-            const component = upgrades.get(entry.target)
-            if (component) enable(component)
-          }
-        }, { rootMargin: '180px 0px' })
-        for (const target of upgrades.keys()) observer.observe(target)
-      }, matchMedia('(pointer: coarse)').matches ? 2300 : 500)
-      cancel = () => { first(); observer?.disconnect() }
+    if (!motion) {
+      setReady(effectsOff)
+      return
     }
-    sync()
-    motion.addEventListener('change', sync)
-    return () => { current = false; cancel(); motion.removeEventListener('change', sync) }
-  }, [])
-  return ready
+    let current = true
+    function enable(component: keyof SakugaReadiness) {
+      void loadSakuga(component).then(installed => {
+        if (current) setReady(value => ({ ...value, [component]: installed }))
+      })
+    }
+    let observer: IntersectionObserver | undefined
+    const cancel = afterPaint(() => {
+      enable('button')
+      const upgrades = new Map<Element, 'toast' | 'tooltip'>()
+      const work = document.getElementById('work')
+      const contact = document.getElementById('contact')
+      if (work) upgrades.set(work, 'tooltip')
+      if (contact) upgrades.set(contact, 'toast')
+      observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          observer?.unobserve(entry.target)
+          const component = upgrades.get(entry.target)
+          if (component) enable(component)
+        }
+      }, { rootMargin: '180px 0px' })
+      for (const target of upgrades.keys()) observer.observe(target)
+    }, matchMedia('(pointer: coarse)').matches ? 2300 : 500)
+    return () => { current = false; cancel(); observer?.disconnect() }
+  }, [motion])
+  return motion ? ready : effectsOff
 }
 
 export function ActionLink({ href, children, appearance = '', sfx, download }: {

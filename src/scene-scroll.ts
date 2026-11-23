@@ -4,7 +4,7 @@ import Lenis from 'lenis'
 import { copy, projects } from './content'
 import { scenes, type SceneId } from './scenes'
 
-export type StudioPlayback = { progress: number }
+export type StudioPlayback = { progress: number; invalidate?: () => void }
 const beatStart = .2
 const beatLength = .65 / projects.length
 
@@ -13,6 +13,7 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   const root = document.documentElement
   const work = document.getElementById('work')!
   const stage = work.querySelector<HTMLElement>('.studio-stage')!
+  const screen = stage.querySelector<HTMLElement>('.studio-screen')!
   const track = stage.querySelector<HTMLElement>('.project-grid')!
   const cards = Array.from(track.children) as HTMLElement[]
   const dots = Array.from(stage.querySelectorAll<HTMLButtonElement>('[data-beat]'))
@@ -23,18 +24,21 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   const header = document.querySelector<HTMLElement>('.site-header')!
   const clickedHash = document.getElementById(location.hash.slice(1))
   const hashVisible = clickedHash && Math.abs(clickedHash.getBoundingClientRect().top) < 140
+  const followingSection = enhanced && work.getBoundingClientRect().bottom <= header.offsetHeight
+    ? sections.find(section => section.getBoundingClientRect().bottom > header.offsetHeight) : undefined
+  const followingTop = followingSection?.getBoundingClientRect().top
   debug.hidden = !new URLSearchParams(location.search).has('debug')
   root.toggleAttribute('data-studio', enhanced)
   if (enhanced && hashVisible) clickedHash.scrollIntoView({ behavior: 'instant' })
+  else if (followingSection && followingTop !== undefined) {
+    window.scrollBy({ top: followingSection.getBoundingClientRect().top - followingTop, behavior: 'instant' })
+  }
 
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)')
-  const lenis = new Lenis({ smoothWheel: !reduce.matches, syncTouch: false, anchors: false,
+  const lenis = new Lenis({ smoothWheel: false, syncTouch: false, anchors: false,
     prevent: element => !!element.closest('dialog,[data-lenis-prevent]') })
   const tick = (seconds: number) => lenis.raf(seconds * 1000)
   gsap.ticker.add(tick)
   lenis.on('scroll', ScrollTrigger.update)
-  function syncMotion() { lenis.options.smoothWheel = !reduce.matches }
-  reduce.addEventListener('change', syncMotion)
   function lock() {
     if (document.querySelector('dialog[open]')) lenis.stop()
     else if (lenis.isStopped) lenis.start()
@@ -66,15 +70,30 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     chip.textContent = copy.ready.replace('CH.01', chip.dataset.chapter)
     if (!debug.hidden) debug.value = active + ' · ' + Math.round(p * 100) + '% · ' + (enhanced ? projects[current]?.title ?? (current < 0 ? 'Lid opening' : copy.allWork) : 'Static grid')
   }
+  function scrub(trigger: ScrollTrigger) {
+    playback.progress = trigger.progress
+    update()
+    playback.invalidate?.()
+  }
   const trigger = enhanced ? ScrollTrigger.create({ trigger: work, start: 'top top', end: 'bottom bottom',
-    onUpdate: self => { playback.progress = self.progress; update() },
-    onRefresh: self => { playback.progress = self.progress; update() } }) : undefined
+    onUpdate: scrub, onRefresh: scrub }) : undefined
   function go(index: number) {
-    if (trigger) lenis.scrollTo(trigger.start + (trigger.end - trigger.start) * (beatStart + beatLength * index + .025), { immediate: true })
+    if (!trigger) return
+    const progress = beatStart + beatLength * index + .025
+    lenis.scrollTo(trigger.start + (trigger.end - trigger.start) * progress, { immediate: true })
+    ScrollTrigger.update()
   }
   function select(event: MouseEvent) {
     const target = (event.target as Element).closest<HTMLButtonElement>('[data-beat]')
     if (target) go(Number(target.dataset.beat))
+  }
+  function restoreProject(event: Event) {
+    if (!trigger || !(event.target instanceof HTMLElement)) return
+    const index = cards.findIndex(card => card.contains(event.target as HTMLElement))
+    if (index < 0) return
+    lock()
+    ScrollTrigger.update()
+    if (beat !== index) go(index)
   }
   let touch: Touch | undefined
   function begin(event: TouchEvent) { touch = event.touches[0] }
@@ -102,9 +121,10 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     target.focus({ preventScroll: true })
     const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0
     const destination = scrollY + target.getBoundingClientRect().top - padding
-    lenis.scrollTo(destination, { duration: .5, immediate: reduce.matches })
+    lenis.scrollTo(destination, { duration: .5 })
   }
   stage.addEventListener('click', select)
+  stage.addEventListener('studio:restore-project', restoreProject)
   stage.addEventListener('touchstart', begin, { passive: true })
   stage.addEventListener('touchend', swipe, { passive: true })
   window.addEventListener('keydown', interrupt)
@@ -112,12 +132,16 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   window.addEventListener('scroll', update, { passive: true })
   update()
   return () => {
+    const section = enhanced && sections.find(section => section.getBoundingClientRect().bottom > header.offsetHeight)
+    const sectionTop = section ? section.getBoundingClientRect().top : 0
+    const project = section === work && sectionTop <= header.offsetHeight && beat >= 0
+      ? cards[Math.min(beat, projects.length - 1)] : undefined
     trigger?.kill()
     modal.disconnect()
-    reduce.removeEventListener('change', syncMotion)
     gsap.ticker.remove(tick)
     lenis.destroy()
     stage.removeEventListener('click', select)
+    stage.removeEventListener('studio:restore-project', restoreProject)
     stage.removeEventListener('touchstart', begin)
     stage.removeEventListener('touchend', swipe)
     window.removeEventListener('keydown', interrupt)
@@ -125,7 +149,17 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     window.removeEventListener('scroll', update)
     root.removeAttribute('data-studio')
     track.style.removeProperty('transform')
+    for (const property of ['width', 'height', 'transform']) screen.style.removeProperty(property)
     cards.forEach(card => { card.inert = false })
+    delete stage.dataset.cards
+    delete chip.dataset.chapter
+    chip.textContent = copy.ready
+    energy.style.removeProperty('transform')
     playback.progress = 0
+    if (project) project.scrollIntoView({ behavior: 'instant', block: 'start' })
+    else if (section && section !== work) {
+      const shift = section.getBoundingClientRect().top - sectionTop
+      if (Math.abs(shift) > 1) window.scrollBy({ top: shift, behavior: 'instant' })
+    }
   }
 }

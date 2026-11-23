@@ -3,13 +3,14 @@ import { ActionLink, LinkEffects, useSakuga } from './sakuga'
 import { Scene, WorkSequence } from './Scene'
 import { sceneImage } from './scene-art'
 import { ThemeSwitch } from './ThemeSwitch'
+import { MotionSwitch, useMotionPreference } from './MotionSwitch'
 import { useOpeningScreen } from './opening-screen'
 import { Work } from './work/Work'
 import { Icon } from './Icon'
 import { ChapterHeading } from './ChapterHeading'
 import { ContactActions } from './ContactActions'
 
-function Navigation({ effectsReady }: { effectsReady: boolean }) {
+function Navigation({ effectsReady, motion }: { effectsReady: boolean; motion: boolean | undefined }) {
   return <header className="site-header">
     <a className="skip" href="#main" data-link-impact>{copy.skip}</a>
     <div className="energy" aria-hidden="true"><span data-energy /></div>
@@ -23,7 +24,8 @@ function Navigation({ effectsReady }: { effectsReady: boolean }) {
           <summary data-link-impact>{copy.menu}</summary>
           <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
         </details>
-        <ThemeSwitch effectsReady={effectsReady} />
+        <MotionSwitch enabled={motion} />
+        <ThemeSwitch effectsReady={effectsReady} motion={motion === true} />
         <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" /><span className="header-resume-label">{copy.resume}</span></ActionLink>
       </div>
     </div>
@@ -68,7 +70,11 @@ function Hero() {
 
 function About() {
   const a = copy.about
-  return <Scene id="about" className="site-section section-tone"><div className="frame">
+  return <Scene id="about" className="site-section section-tone">
+    <figure className="about-eyes" aria-hidden="true">
+      <img src={sceneImage('eyesPanel')} width="720" height="309" alt="" loading="lazy" decoding="async" />
+    </figure>
+    <div className="frame">
     <ChapterHeading chapter={a} id="about-title" />
     <div className="about-grid">
       <figure className="character panel" data-reveal>
@@ -113,14 +119,15 @@ function Contact({ copyEffect, toast }: { copyEffect: boolean; toast: boolean })
 }
 
 export function App() {
-  useOpeningScreen()
-  const sakuga = useSakuga()
+  const motion = useMotionPreference()
+  useOpeningScreen(motion === true)
+  const sakuga = useSakuga(motion === true)
 
   return <>
-    <Navigation effectsReady={sakuga.button} />
+    <Navigation effectsReady={sakuga.button} motion={motion} />
     <LinkEffects ready={sakuga.button} />
     <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
-    <WorkSequence />
+    {motion && <WorkSequence />}
     <footer className="footer"><div className="frame"><p>{copy.footer}</p><nav aria-label={copy.contact.title}>{profile.socials.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href={'mailto:' + profile.email}>{copy.email}</a></nav><a className="comic-action" href="#hero"><Icon name="arrow_upward" />{copy.top}</a></div></footer>
   </>
 }

@@ -25,25 +25,15 @@ export function WorkSequence() {
   const onPaint = useCallback(() => setReady(true), [])
   const onFailure = useCallback(() => { setReady(false); setLoad(false) }, [])
   useEffect(() => {
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)')
-    let cancel = () => {}
-    function sync() {
-      cancel()
-      onFailure()
-      if (!reduce.matches && 'WebGL2RenderingContext' in window) {
-        cancel = afterOpening(() => afterPaint(() => {
-          try {
-            const probe = document.createElement('canvas').getContext('webgl2')
-            if (!probe) return
-            probe.getExtension('WEBGL_lose_context')?.loseContext()
-            setLoad(true)
-          } catch { onFailure() }
-        }, 0))
-      }
-    }
-    sync()
-    reduce.addEventListener('change', sync)
-    return () => { cancel(); reduce.removeEventListener('change', sync) }
+    if (!('WebGL2RenderingContext' in window)) return
+    return afterOpening(() => afterPaint(() => {
+      try {
+        const probe = document.createElement('canvas').getContext('webgl2')
+        if (!probe) return
+        probe.getExtension('WEBGL_lose_context')?.loseContext()
+        setLoad(true)
+      } catch { onFailure() }
+    }, 0))
   }, [onFailure])
   useEffect(() => {
     let active = true

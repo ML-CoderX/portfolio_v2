@@ -83,6 +83,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
       pointer.current.y = fine.matches && event.pointerType === 'mouse' ? event.clientY / innerHeight - .5 : 0
     }
     function wake() { if (!document.hidden && visible.current) invalidate() }
+    playback.invalidate = wake
     const observer = new IntersectionObserver(() => {
       const a = dom.slot.getBoundingClientRect(), b = dom.work.getBoundingClientRect()
       visible.current = (a.bottom > 0 && a.top < innerHeight) || (b.bottom > 0 && b.top < innerHeight)
@@ -106,6 +107,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
       if (visible.current) wake()
     })
     return () => {
+      delete playback.invalidate
       disconnect(); texture?.dispose(); observer.disconnect()
       scene.environment = null
       shadowMap.dispose()
@@ -115,14 +117,15 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
       window.removeEventListener('pointermove', move)
       gl.domElement.removeEventListener('webglcontextlost', lost)
     }
-  }, [studio, scene, dom, gl, invalidate, onFailure, shadowMap])
+  }, [studio, scene, dom, gl, invalidate, onFailure, shadowMap, playback])
   useFrame(({ clock }, delta) => {
     if (document.hidden) return
     if (!visible.current && painted.current) { gl.clear(); return }
     const p = playback.progress, dt = Math.min(.06,delta)
     const { width:w, height:h } = size
     const slot = dom.slot.getBoundingClientRect(), stage = dom.stage.getBoundingClientRect()
-    const join = phase(scrollY, 0, Math.max(1,dom.work.getBoundingClientRect().top + scrollY))
+    const work = dom.work.getBoundingClientRect()
+    const join = phase(scrollY, 0, Math.max(1,work.top + scrollY))
     const open = phase(p,0,.2), approach = phase(p,.04,.25)
     const header = dom.header.offsetHeight
     const usable = h - header
@@ -165,7 +168,13 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     const overlayScale = .5 * fieldHeight / h
     overlay.current.position.set(camera.position.x+(w/2-x)*overlayScale,camera.position.y+(y-h/2)*overlayScale,camera.position.z-.5)
     overlay.current.scale.set(w*overlayScale,h*overlayScale,1)
-    gl.render(scene,camera)
+    if (p === 1 && work.bottom < h) {
+      gl.clear()
+      gl.setScissor(0, h - Math.max(0, work.bottom), w, Math.max(0, work.bottom))
+      gl.setScissorTest(true)
+      gl.render(scene,camera)
+      gl.setScissorTest(false)
+    } else gl.render(scene,camera)
     if (!painted.current) { painted.current = true; onPaint() }
     if (visible.current && (join < 1 || Math.abs(root.current.rotation.x - .18) > .001 || Math.abs(root.current.rotation.y) > .001 || Math.abs(night - n) > .002)) invalidate()
   },1)

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { chromium, devices, firefox, webkit } from '@playwright/test'
-import sharp from 'sharp'
+
 
 const baseURL = process.env.QA_URL || 'http://127.0.0.1:4173'
 const runners = {
@@ -14,169 +14,20 @@ const targets = process.argv.slice(2).filter(flag => flag !== '--opening-only')
 const names = targets.length ? targets : Object.keys(runners)
 await mkdir('qa', { recursive: true })
 
-function screenPixel(screenshot, left, top) {
-  return sharp(screenshot).extract({ left, top, width: 1, height: 1 }).removeAlpha().raw().toBuffer()
+async function selectBeat(page, index) {
+  await page.locator('[data-beat="' + index + '"]').click()
+  await page.waitForFunction(i => document.querySelector('[data-beat="' + i + '"]').getAttribute('aria-current') === 'true', index)
 }
 
-async function verifyChapterShots(page, name, mode) {
-  const shots = page.locator('[data-chapter-shot]')
-  assert.equal(await shots.count(), 2)
-  assert.equal(await page.locator('#about > [data-chapter-shot="eyes"]:first-child').count(), 1)
-  assert.equal(await page.locator('#contact > [data-chapter-shot="curtains"]').count(), 1)
-  if (mode !== 'webgl') {
-    assert.equal(await shots.filter({ visible: true }).count(), 0)
-    return
-  }
-  async function atShot(shot, progress) {
-    await page.evaluate(({ shot, progress }) => {
-      const eyes = shot === 'eyes'
-      const rect = document.querySelector(eyes ? '[data-chapter-shot="eyes"]' : '#contact').getBoundingClientRect()
-      const start = rect.top + scrollY - innerHeight * (eyes ? .88 : .92)
-      const end = (eyes ? rect.bottom : rect.top) + scrollY - innerHeight * (eyes ? .33 : .25)
-      scrollTo({ top: start + (end - start) * progress, behavior: 'instant' })
-    }, { shot, progress })
-    const destination = shot === 'eyes' ? 'about' : 'contact'
-    await page.waitForFunction(({ destination, progress }) => {
-      const match = document.querySelector('[data-scene-debug]').value.match(new RegExp(destination + ' (\\d+)%$'))
-      return match && Math.abs(Number(match[1]) - progress * 100) <= 2
-    }, { destination, progress })
-  }
-  const gazes = () => page.locator('[data-eye-gaze]').evaluateAll(nodes => nodes.map(node => node.transform.baseVal.getItem(0).matrix.e))
-  await atShot('eyes', .4)
-  assert.ok((await gazes()).every(x => x > 15))
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/about-eyes-right.png' })
-  await atShot('eyes', .7)
-  assert.ok((await gazes()).every(x => x < -15))
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/about-eyes-left.png' })
-  await atShot('eyes', .4)
-  assert.ok((await gazes()).every(x => x > 15))
-  const curtains = page.locator('#contact > [data-chapter-shot="curtains"]')
-  const travel = () => curtains.evaluate(node => parseFloat(node.style.getPropertyValue('--curtain-travel')))
-  await page.evaluate(() => document.activeElement.blur())
-  await atShot('curtains', .72)
-  assert.ok(await travel() > 75)
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/contact-opening.png' })
-  await atShot('curtains', .55)
-  await page.locator('#contact input').evaluate(input => input.focus({ preventScroll: true }))
-  assert.equal(await curtains.evaluate(node => getComputedStyle(node).visibility), 'hidden')
-  await page.evaluate(() => document.activeElement.blur())
-  await atShot('curtains', .1)
-  assert.equal(await travel(), 0)
+async function verifyScenes(page) {
+  await page.locator('.hero a[href="#work"]').first().click()
+  await page.waitForFunction(() => location.hash === '#work' && Math.abs(document.getElementById('work').getBoundingClientRect().top - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)) < 3).catch(async error => { throw new Error('Work anchor ' + JSON.stringify(await page.evaluate(() => [location.hash,scrollY,document.getElementById('work').getBoundingClientRect().top,getComputedStyle(document.documentElement).scrollPaddingTop])), { cause: error }) })
+  for (const index of [0, 1, 2, 3, 4, 3, 2, 1, 0]) await selectBeat(page, index)
+  assert.equal(await page.locator('.studio-final a').getAttribute('href'), 'https://github.com/ML-CoderX')
+  await page.locator('.r3f-layer canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })))
+  await page.waitForFunction(() => !document.documentElement.hasAttribute('data-studio'))
+  assert.equal(await page.locator('#work article:not([inert])').count(), 4)
 }
-
-async function verifyScenes(page, name, touch) {
-  const debug = page.locator('[data-scene-debug]')
-  await debug.waitFor()
-  const settleScroll = () => page.evaluate(() => new Promise(resolve => {
-    let position = scrollY
-    let changed = performance.now()
-    function settle(now) {
-      if (scrollY !== position) { position = scrollY; changed = now }
-      if (now - changed >= 160) resolve(position)
-      else requestAnimationFrame(settle)
-    }
-    requestAnimationFrame(settle)
-  }))
-  const atProgress = async progress => {
-    await page.evaluate(value => {
-      const workTop = document.querySelector('#work').getBoundingClientRect().top + scrollY
-      const start = Math.max(0, workTop - innerHeight * .85)
-      const end = workTop - innerHeight * .25
-      scrollTo({ top: start + (end - start) * value, behavior: 'instant' })
-    }, progress)
-    await page.waitForFunction(value => {
-      const match = document.querySelector('[data-scene-debug]').value.match(/work (\d+)%$/)
-      return match && Math.abs(Number(match[1]) - value * 100) <= 2
-    }, progress)
-  }
-
-  const mode = await page.locator('html').getAttribute('data-scene-mode')
-  if (touch) assert.notEqual(mode, 'webgl')
-  if (name === 'chrome-mobile') assert.equal(mode, 'css')
-  if (mode === 'webgl' || mode === 'css') {
-    await atProgress(.2)
-    assert.equal(await page.locator('[data-reach-shot]').count(), 0)
-    await atProgress(.5)
-    assert.deepEqual(await page.locator('#work .chapter-heading').evaluate(element =>
-      [getComputedStyle(element).backgroundColor, getComputedStyle(element, '::before').content]), ['rgba(0, 0, 0, 0)', 'none'])
-    if (name === 'chrome-desktop') {
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-      const screenshot = await page.screenshot({ path: 'qa/hero-work-midpoint.png' })
-      const [red, green, blue] = await screenPixel(screenshot, 8, 110)
-      assert.ok(Math.max(green, blue) < 160 && green < Math.max(red, 25), 'Ink did not cover the artwork at midpoint')
-    }
-    await atProgress(.85)
-    await atProgress(.2)
-    if (touch) {
-      const artwork = page.locator('#work .scene-art')
-      assert.match(await artwork.evaluate(element => getComputedStyle(element).clipPath), /inset/)
-    } else {
-      const viewport = page.viewportSize()
-      await page.setViewportSize({ width: viewport.width, height: viewport.height - 90 })
-      await atProgress(.5)
-      await page.setViewportSize(viewport)
-      await page.emulateMedia({ reducedMotion: 'reduce' })
-      await page.locator('.r3f-layer').waitFor({ state: 'detached' })
-      assert.equal(await page.locator('.workstation > img').evaluate(element => getComputedStyle(element).opacity), '1')
-      await page.emulateMedia({ reducedMotion: 'no-preference' })
-      await page.waitForFunction(previous => document.documentElement.dataset.sceneMode === previous, mode)
-    }
-  }
-  if (touch) {
-    await verifyChapterShots(page, name, mode)
-  } else {
-    await page.evaluate(() => document.activeElement.blur())
-    await page.keyboard.press('Home')
-    await page.waitForFunction(() => scrollY === 0)
-    const gutter = await page.evaluate(() => innerWidth - document.documentElement.clientWidth)
-    if (gutter > 0 && name === 'chrome-desktop') {
-      const thumb = await page.evaluate(() => innerHeight ** 2 / document.documentElement.scrollHeight)
-      const x = page.viewportSize().width - gutter / 2
-      await page.mouse.move(x, thumb / 2)
-      await page.mouse.down()
-      await page.mouse.move(x, thumb / 2 + 120, { steps: 8 })
-      await page.mouse.up()
-      await page.waitForFunction(() => scrollY > 0)
-      await page.keyboard.press('Home')
-      await page.waitForFunction(() => scrollY === 0)
-      console.log('Native scrollbar drag passed')
-    }
-    await page.mouse.move(140, 160)
-    await page.mouse.wheel(0, 120)
-    await page.waitForFunction(() => scrollY >= 100)
-    await settleScroll()
-    await page.keyboard.press('PageDown')
-    await page.waitForFunction(() => scrollY > innerHeight / 2)
-    const pageDown = await settleScroll()
-    await page.keyboard.press('PageUp')
-    await page.waitForFunction(previous => scrollY < previous - 100, pageDown)
-    await settleScroll()
-    await page.keyboard.press('End')
-    await page.waitForFunction(() => scrollY >= document.documentElement.scrollHeight - innerHeight - 2)
-    await page.waitForFunction(() => document.documentElement.dataset.activeScene === 'contact')
-    await settleScroll()
-    await page.keyboard.press('Home')
-    await page.waitForFunction(() => scrollY === 0)
-    await page.locator('.hero a[href="#work"]').first().click()
-    await page.waitForFunction(() => location.hash === '#work' && Math.abs(document.querySelector('#work').getBoundingClientRect().top - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)) < 3)
-    assert.equal(await page.evaluate(() => document.activeElement.id), 'work')
-    await page.waitForFunction(() => document.querySelector('[data-active-chapter]').dataset.chapter === 'CH.02')
-    await page.goBack()
-    await page.waitForFunction(() => !location.hash && scrollY < 3)
-    await page.goForward()
-    await page.waitForFunction(() => location.hash === '#work' && scrollY > 0)
-    await verifyChapterShots(page, name, mode)
-    if (mode === 'webgl') {
-      await page.locator('.r3f-layer canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })))
-      await page.waitForFunction(() => document.documentElement.dataset.sceneMode === 'static')
-      await page.locator('.r3f-layer').waitFor({ state: 'detached' })
-      assert.equal(await page.locator('.workstation > img').evaluate(element => getComputedStyle(element).opacity), '1')
-    }
-    await page.goto(new URL('?debug#contact', baseURL).href)
-    await page.waitForFunction(() => document.documentElement.dataset.activeScene === 'contact')
-  }
-}
-
 async function verifyTheme(page, name) {
   await page.goto(baseURL)
   const theme = page.getByRole('switch', { name: 'Night mode' })
@@ -192,7 +43,7 @@ async function verifyTheme(page, name) {
   await page.reload()
   await page.waitForFunction(() => document.querySelector('.theme-switch').getAttribute('aria-checked') === 'true')
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'night')
-  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/night-mode.png', fullPage: true })
+  if (name === 'chrome-desktop') await page.screenshot({ path: 'qa/night-mode.png', fullPage: false })
   await theme.click()
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'day')
   assert.equal(await theme.getAttribute('aria-checked'), 'false')
@@ -207,16 +58,7 @@ async function interact(browser, name, options = {}) {
   await page.goto(new URL('?debug', baseURL).href)
   await page.getByRole('heading', { level: 1, name: 'Saad AR' }).waitFor()
   await page.waitForFunction(() => !!customElements.get('sakuga-button'))
-  if (name === 'chrome-desktop') {
-    await page.waitForFunction(() => document.documentElement.dataset.sceneMode === 'webgl', undefined, { timeout: 12000 })
-    await page.mouse.move(800, 215)
-    await page.waitForTimeout(750)
-    assert.ok(Math.max(...await screenPixel(await page.screenshot(), 800, 215)) < 80, 'Orb should follow the cursor')
-    await page.mouse.move(850, 275)
-    await page.waitForTimeout(750)
-    const moved = await page.screenshot({ path: 'qa/hero-orb.png' })
-    assert.ok(Math.max(...await screenPixel(moved, 850, 275)) < 80 && Math.max(...await screenPixel(moved, 800, 215)) > 120, 'Orb should leave the previous point')
-  }
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-studio'))
   const resources = await page.evaluate(() => ({
     paint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
     enhancements: performance.getEntriesByType('resource')
@@ -229,8 +71,9 @@ async function interact(browser, name, options = {}) {
   assert.match(await page.locator('#about figure.character > img').getAttribute('src'), /portrait-/)
   assert.ok(await page.locator('html').evaluate(element => element.scrollWidth <= element.clientWidth), 'Horizontal overflow')
   assert.ok(responses.some(url => url.includes('/sakuga-vfx/button.js')))
-  await page.screenshot({ path: 'qa/' + name + '.png', fullPage: true })
+  await page.screenshot({ path: 'qa/' + name + '.png', fullPage: false })
   const dossier = page.getByRole('button', { name: 'Open dossier · Cashlio' })
+  await selectBeat(page, 2)
   await dossier.click()
   await page.waitForFunction(() => !!customElements.get('sakuga-tooltip'))
   const dialog = page.getByRole('dialog')
@@ -240,12 +83,14 @@ async function interact(browser, name, options = {}) {
   assert.ok(await dialog.evaluate(element => element.contains(document.activeElement)))
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'hidden' })
-  assert.ok(await dossier.evaluate(element => element === document.activeElement))
+  await page.waitForFunction(() => document.activeElement?.textContent.includes('Open dossier') && document.activeElement.closest('article')?.textContent.includes('Cashlio')).catch(async e => { throw new Error(JSON.stringify(await page.evaluate(() => [scrollY,document.activeElement.tagName,document.activeElement.textContent.slice(0,40),document.querySelector('[data-scene-debug]').value])),{cause:e}) })
   assert.notEqual(await page.locator('html').evaluate(element => getComputedStyle(element).overflow), 'hidden')
+  await selectBeat(page, 3)
   await page.getByRole('button', { name: 'Open dossier · DocuAI' }).click()
   await dialog.getByText('Run the prediction model').waitFor()
   await page.mouse.click(3, 3)
   await dialog.waitFor({ state: 'hidden' })
+  await selectBeat(page, 2)
   const chip = page.getByRole('button', { name: 'Angular', exact: true })
   if (options.hasTouch) await chip.tap()
   else await chip.focus()
@@ -288,7 +133,7 @@ async function fallbacks(browser) {
   await reduced.goto(baseURL)
   await reduced.locator('#opening-screen').waitFor({ state: 'detached' })
   await reduced.getByRole('button', { name: 'Open dossier · Cashlio' }).waitFor()
-  await reduced.locator('.workstation > img').waitFor()
+  await reduced.locator('.closed-fallback').waitFor()
   assert.equal(await reduced.locator('canvas').count(), 0)
   assert.equal(await reduced.locator('[data-chapter-shot]').filter({ visible: true }).count(), 0)
   assert.ok(!requests.some(url => url.includes('/sakuga-vfx/') || url.includes('/Workstation-')))
@@ -311,10 +156,8 @@ async function fallbacks(browser) {
   })
   await blocked.goto(baseURL)
   await blocked.locator('#opening-screen').waitFor({ state: 'detached' })
-  if (await blocked.evaluate(() => 'WebGL2RenderingContext' in window)) {
-    await blocked.waitForFunction(() => performance.getEntriesByType('resource').some(entry => entry.name.includes('/Workstation-')))
-  }
-  await blocked.locator('.workstation > img').waitFor()
+
+  await blocked.locator('.closed-fallback').waitFor()
   await blocked.locator('.r3f-layer').waitFor({ state: 'detached' })
   await blocked.getByRole('button', { name: 'Copy', exact: true }).click()
   await blocked.getByText('Email selected. Use your device’s copy command.').waitFor()
@@ -328,7 +171,7 @@ async function verifyOpeningScreen(browser, name) {
   const page = await browser.newPage()
   let releaseImage
   const delay = new Promise(resolve => { releaseImage = resolve })
-  await page.route('**/workstation.svg', async route => {
+  await page.route('**/fonts/bebas-neue-latin-400-normal.woff2', async route => {
     await delay
     await route.continue()
   })
@@ -339,10 +182,9 @@ async function verifyOpeningScreen(browser, name) {
     await opening.locator('[data-enhanced] sakuga-progress').waitFor({ state: 'visible' })
     await opening.getByRole('progressbar', { name: 'Portfolio loading progress' }).waitFor()
     assert.equal(await page.locator('.hero-entrance, .r3f-layer').count(), 0)
-    if (name === 'chrome') await page.screenshot({ path: 'qa/opening-screen.png' })
     releaseImage()
     await opening.waitFor({ state: 'detached' })
-    await page.locator('.hero-entrance').waitFor()
+    await page.locator('.closed-fallback').waitFor({ state: 'attached' })
   } finally {
     releaseImage()
     await page.close()

@@ -21,12 +21,11 @@ The build renders the shared React page into dist/index.html, then generates the
 - Edit src/content.ts for copy, project descriptions, milestones, dossiers, toolkit, accessible labels, metadata, and URLs. Missing URLs leave their controls hidden.
 - The header and Contact section use public/Saad_Resume.pdf. Replace that file when you update the résumé.
 - The page is composed in src/App.tsx. Project cards, art, and dossiers live in src/work/. The Stitch Tailwind tokens are in tailwind.config.cjs, and layout and motion styles are in src/style.css.
-- The workstation lives in src/Workstation.tsx and its fallback is public/workstation.svg. The character illustration came from the Stitch export.
-- The chapter sequence is configured in src/scenes.ts. GSAP ScrollTrigger maps native scroll to shot progress in src/scene-scroll.ts. The eye movement and Contact curtains are in src/SceneShots.tsx and src/shot-motion.ts. Each shot reverses with the scroll position. Use `?debug` to see chapter and transition progress.
+- The closed Hero laptop and the Work studio share one lazy R3F renderer in src/Workstation.tsx. The procedural metal shell reflects a self-hosted studio panorama in public/studio-environment.jpg.
+- Work occupies six viewport heights, with five viewport heights of pinned travel. src/scene-scroll.ts maps Lenis and native scrolling to the lid, project beats, progress dots, and final GitHub card. Add ?debug to inspect progress and the active beat.
 - src/ThemeSwitch.tsx stores the visitor’s day or night choice locally. The header uses the MIT-licensed Sakuga toggle artwork with a native switch control. Theme colors live in src/style.css.
 - The opening screen lives in index.html. src/opening-screen.ts advances the Sakuga progress bar after hydration and the first-screen assets, with a native meter fallback and a startup deadline.
-- Fine-pointer desktops with WebGL get the full sequence. Touch screens get clipped chapter art reveals. Reduced motion and unavailable WebGL keep the stacked reading layout.
-- src/enhancements.ts and src/motion.ts handle reading progress, pointer trails, stamps, and scroll animation. The 3D view and Sakuga scripts load after initial rendering. Reduced motion keeps the hero artwork static.
+- Touch visitors can swipe through the laptop screen. Reduced motion, renderer failure, and disabled JavaScript use the prerendered four-project grid.
 - The shadcn registry files are in public/sakuga-vfx with their MIT license. Local changes share the front canvas for bursts and pointer trails, suspend the shared clock while hidden, let CTA effects originate at anchors, and reposition tooltips near viewport edges.
 
 ## Deploy and verify

@@ -1,334 +1,202 @@
-import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber'
+import { Component, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei/core/RoundedBox.js'
-import {
-  BackSide, CanvasTexture, Color, DataTexture, Group, MathUtils, NearestFilter,
-  PerspectiveCamera, RedFormat, Scene, ShaderMaterial, SRGBColorSpace, TextureLoader, Vector2,
-  Vector4, WebGLRenderTarget,
-} from 'three'
-import type { ScenePlayback } from './scenes'
-import { phase } from './shot-motion'
+import { CanvasTexture, Color, DirectionalLight, EquirectangularReflectionMapping, Group, InstancedMesh, Matrix4, MathUtils,
+  Mesh, MeshPhysicalMaterial, MeshStandardMaterial, PerspectiveCamera, PointLight, Sprite, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
 import { subscribeToSakugaSurface } from './sakuga-runtime'
-type Callbacks = { onPaint: () => void; onFailure: () => void }
+import type { StudioPlayback } from './scene-scroll'
 
-class CanvasBoundary extends Component<{ onFailure: () => void; children: ReactNode }, { failed: boolean }> {
+type Props = { playback: StudioPlayback; onPaint: () => void; onFailure: () => void }
+const mix = MathUtils.lerp
+const phase = MathUtils.smoothstep
+class Boundary extends Component<{ children: ReactNode; fail: () => void }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
-  componentDidCatch() { this.props.onFailure() }
+  componentDidCatch() { this.props.fail() }
   render() { return this.state.failed ? null : this.props.children }
 }
 
-function Box({ size, at, color, gradient, outline = .036 }: {
-  size: [number, number, number]; at: [number, number, number]; color: string; gradient: DataTexture; outline?: number
-}) {
-  return <group position={at}>
-    {outline > 0 && <mesh>
-      <boxGeometry args={size.map(dimension => dimension + outline) as [number, number, number]} />
-      <meshBasicMaterial color="#0b0b12" side={BackSide} />
-    </mesh>}
-    <RoundedBox args={size} radius={.028} smoothness={2}>
-      <meshToonMaterial color={color} gradientMap={gradient} />
-    </RoundedBox>
-  </group>
-}
-
-function Laptop({ playback }: { playback: ScenePlayback }) {
-  const rig = useRef<Group>(null)
-  const pointer = useRef(new Vector2())
-  const gradient = useMemo(() => {
-    const texture = new DataTexture(new Uint8Array([105, 186, 255]), 3, 1, RedFormat)
-    texture.minFilter = texture.magFilter = NearestFilter
-    texture.needsUpdate = true
-    return texture
-  }, [])
-  useEffect(() => () => gradient.dispose(), [gradient])
-  useEffect(() => {
-    const fine = matchMedia('(pointer: fine)')
-    function move(event: PointerEvent) {
-      if (fine.matches && event.pointerType === 'mouse') pointer.current.set(event.clientX / innerWidth * 2 - 1, event.clientY / innerHeight * 2 - 1)
-    }
-    function reset() { pointer.current.set(0, 0) }
-    window.addEventListener('pointermove', move, { passive: true })
-    document.addEventListener('pointerleave', reset)
-    return () => { window.removeEventListener('pointermove', move); document.removeEventListener('pointerleave', reset) }
-  }, [])
-  useFrame(({ clock }, delta) => {
-    if (!rig.current) return
-    const approach = phase(playback.progress, 0, .32)
-    rig.current.position.y = -.12 + Math.sin(clock.elapsedTime * 1.45) * .065 * (1 - approach)
-    rig.current.rotation.y = MathUtils.damp(rig.current.rotation.y, -.45 + .14 * approach + pointer.current.x * .14 * (1 - approach), 5, delta)
-    rig.current.rotation.x = MathUtils.damp(rig.current.rotation.x, pointer.current.y * .09 * (1 - approach), 5, delta)
-    rig.current.scale.setScalar(1 + approach * .15)
-  })
-  return <group ref={rig} rotation={[0, -.45, 0]}>
-    <Box size={[3.8, .19, 2.05]} at={[0, 0, .36]} color="#f6f3ec" gradient={gradient} />
-    <Box size={[1.1, .02, .36]} at={[0, .102, 1.11]} color="#f6f3ec" gradient={gradient} />
-    {Array.from({ length: 3 }, (_, row) => Array.from({ length: 10 }, (_, column) =>
-      <Box key={row * 10 + column} size={[.255, .042, .15]} at={[-1.4 + column * .31, .104, .21 + row * .22]} color={column % 3 ? '#ff2e88' : '#fde400'} gradient={gradient} outline={.019} />
-    ))}
-    <group position={[0, .13, -.62]} rotation={[-.18, 0, 0]}>
-      <Box size={[3.77, 2.05, .15]} at={[0, 1, 0]} color="#f6f3ec" gradient={gradient} />
-      <Box size={[3.44, 1.72, .035]} at={[0, 1.025, .091]} color="#6c4bff" gradient={gradient} />
-      <Box size={[.74, .095, .021]} at={[-1, 1.48, .119]} color="#fde400" gradient={gradient} outline={0} />
-      <Box size={[1.46, .075, .021]} at={[-.64, 1.23, .119]} color="#f6f3ec" gradient={gradient} outline={0} />
-      <Box size={[1.07, .075, .021]} at={[-.83, .99, .119]} color="#ff2e88" gradient={gradient} outline={0} />
-    </group>
-  </group>
-}
-
-const screenVertex = `
-  uniform vec4 bounds;
-  varying vec2 surface;
-  void main() {
-    surface = uv;
-    gl_Position = vec4(bounds.xy + position.xy * bounds.zw, 0.0, 1.0);
-  }
-`
-
-const laptopFragment = `
-  uniform sampler2D image;
-  uniform float pitch;
-  varying vec2 surface;
-  void main() {
-    vec4 pixel = texture2D(image, surface);
-    float dotInk = 1.0 - smoothstep(.19, .28, length(fract(gl_FragCoord.xy / pitch) - .5));
-    float tone = 1.0 - dot(pixel.rgb, vec3(.299, .587, .114));
-    gl_FragColor = vec4(mix(pixel.rgb, vec3(.004, .004, .006), dotInk * tone * .58), pixel.a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
-`
-
-const inkFragment = `
-  uniform sampler2D ink;
-  uniform float progress;
-  uniform float aspect;
-  uniform float orbSize;
-  uniform float textureReady;
-  uniform vec2 origin;
-  uniform vec2 orb;
-  uniform vec3 blackInk;
-  uniform vec3 pinkInk;
-  varying vec2 surface;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
-
-  float noise(vec2 p) {
-    vec2 cell = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(cell), hash(cell + vec2(1.,0.)), f.x),
-      mix(hash(cell + vec2(0.,1.)), hash(cell + 1.), f.x), f.y);
-  }
-
-  void main() {
-    vec2 uv = vec2(surface.x, 1.0 - surface.y);
-    vec2 ratio = vec2(aspect, 1.0);
-    float orbDistance = length((uv - orb) * ratio);
-    float circle = 1.0 - smoothstep(orbSize * .92, max(orbSize, .001), orbDistance);
-    float rim = smoothstep(orbSize * .72, max(orbSize * .94, .001), orbDistance);
-    vec3 orbColor = mix(blackInk, pinkInk, rim);
-    float orbAlpha = circle * step(.001, orbSize);
-    if (progress <= 0.0) {
-      gl_FragColor = vec4(orbColor, orbAlpha);
-      #include <colorspace_fragment>
-      return;
-    }
-    vec2 offset = (uv - origin) * ratio;
-    vec2 sampleUV = clamp(offset * .78 + .5, 0.0, 1.0);
-    vec3 art = texture2D(ink, vec2(sampleUV.x, 1.0 - sampleUV.y)).rgb;
-    float textureMask = (1.0 - dot(art, vec3(.299, .587, .114))) * textureReady;
-    float grains = noise(uv * 26.0) * .67 + noise(uv * 68.0) * .33;
-    float distance = length(offset) + (grains - .5) * .18 - textureMask * .16;
-    vec2 farCorner = max(origin, 1.0 - origin) * ratio;
-    float extent = length(farCorner) + .18;
-    float radius = mix(-.31, extent, min(progress, 1.0 - progress) * 2.0);
-    float spread = 1.0 - smoothstep(radius - .045, radius + .035, distance);
-    float fringe = smoothstep(radius - .12, radius, distance);
-    float marbling = smoothstep(.40, .78, noise(uv * 10.0) + textureMask * .24) * .74;
-    vec3 color = mix(blackInk, pinkInk, max(fringe, marbling));
-    orbAlpha *= 1.0 - spread;
-    float alpha = spread + orbAlpha;
-    color = (color * spread + orbColor * orbAlpha) / max(alpha, .001);
-    gl_FragColor = vec4(color, alpha);
-    #include <colorspace_fragment>
-  }
-`
-
-type CanvasProps = Callbacks & { playback: ScenePlayback; inkTexture: string; heroId: string }
-
-function screenMaterial(fragmentShader: string, uniforms: ShaderMaterial['uniforms']) {
-  return new ShaderMaterial({
-    uniforms, vertexShader: screenVertex, fragmentShader,
-    depthTest: false, depthWrite: false, transparent: true,
-  })
-}
-
-function SceneFrame({ playback, inkTexture, heroId, onPaint, onFailure }: CanvasProps) {
-  const { gl, size, invalidate, scene, camera } = useThree()
-  const painted = useRef(false)
-  const laptopScene = useMemo(() => new Scene(), [])
-  const laptopCamera = useMemo(() => {
-    const perspective = new PerspectiveCamera(36, 1, .1, 100)
-    perspective.position.set(0, 3.05, 6.5)
-    perspective.lookAt(0, 0, 0)
-    return perspective
-  }, [])
-  const target = useMemo(() => new WebGLRenderTarget(1, 1), [])
-  const laptop = useMemo(() => ({
-    bounds: { value: new Vector4() }, image: { value: target.texture }, pitch: { value: 5 },
-  }), [target])
-  const ink = useMemo(() => ({
-    bounds: { value: new Vector4(0, 0, 1, 1) },
-    ink: { value: null as ReturnType<TextureLoader['load']> | null },
-    textureReady: { value: 0 }, progress: { value: 0 }, aspect: { value: 1 }, orbSize: { value: 0 },
-    origin: { value: new Vector2() }, orb: { value: new Vector2(.7, .4) },
-    blackInk: { value: new Color('#0b0b12') }, pinkInk: { value: new Color('#ff2e88') },
-  }), [])
-  const effects = useMemo(() => ({
-    bounds: { value: new Vector4(0, 0, 1, 1) },
-    image: { value: null as CanvasTexture | null },
-  }), [])
-  const materials = useMemo(() => [
-    screenMaterial(laptopFragment, laptop),
-    screenMaterial(inkFragment, ink),
-    screenMaterial(`
-      uniform sampler2D image;
-      varying vec2 surface;
-      void main() {
-        gl_FragColor = texture2D(image, surface);
-        #include <colorspace_fragment>
+function Keyboard() {
+  const keys = useRef<InstancedMesh>(null!)
+  useLayoutEffect(() => {
+    const matrix = new Matrix4()
+    const bottom = [-1.57,-1.31,-1.05,-.13,.85,1.11,1.37,1.63]
+    let index = 0
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < (row === 4 ? bottom.length : 14); col++) {
+        matrix.makeScale(row === 4 && col === 3 ? 1.48 : .216,.032,.18)
+        matrix.setPosition(row === 4 ? bottom[col] : (col-6.5)*.25,.105,-.82+row*.225)
+        keys.current.setMatrixAt(index++,matrix)
       }
-    `, effects),
-  ], [effects, ink, laptop])
-  const slot = useRef<Element | null>(null)
-  const hero = useRef<HTMLElement | null>(null)
-  const pointer = useRef<{ x: number; y: number } | null>(null)
-  const orbInitialized = useRef(false)
+    }
+    keys.current.instanceMatrix.needsUpdate = true
+    keys.current.computeBoundingSphere()
+  }, [])
+  return <instancedMesh ref={keys} args={[undefined,undefined,64]}>
+    <boxGeometry /><meshStandardMaterial color="#40434e" roughness={.59} />
+  </instancedMesh>
+}
 
-  useEffect(() => () => target.dispose(), [target])
-  useEffect(() => () => materials.forEach(material => material.dispose()), [materials])
+function Laptop({ playback, onPaint, onFailure }: Props) {
+  const { gl, invalidate, scene, size } = useThree()
+  const camera = useThree(state => state.camera) as PerspectiveCamera
+  const [studio, grain] = useLoader(TextureLoader, ['/studio-environment.jpg', '/brushed-metal.png'])
+  const root = useRef<Group>(null!)
+  const hinge = useRef<Group>(null!)
+  const display = useRef<MeshStandardMaterial>(null!)
+  const metal = useRef<MeshPhysicalMaterial>(null!)
+  const key = useRef<DirectionalLight>(null!)
+  const spill = useRef<PointLight>(null!)
+  const shadow = useRef<Mesh>(null!)
+  const overlay = useRef<Sprite>(null!)
+  const painted = useRef(false)
+  const dom = useMemo(() => ({
+    slot: document.querySelector<HTMLElement>('.workstation')!,
+    work: document.getElementById('work')!,
+    stage: document.querySelector<HTMLElement>('.studio-stage')!,
+    screen: document.querySelector<HTMLElement>('.studio-screen')!,
+    header: document.querySelector<HTMLElement>('.site-header')!,
+  }), [])
+  const pointer = useRef({ x: 0, y: 0 })
+  const theme = useRef(0)
+  const visible = useRef(true)
+  const points = useMemo(() => [new Vector3(), new Vector3(), new Vector3()], [])
+  const colors = useMemo(() => [new Color('#d4d8de'), new Color('#515670'), new Color('#f7eaff'), new Color('#c173ff')], [])
+  const shadowMap = useMemo(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const ctx = c.getContext('2d')!
+    const gradient = ctx.createRadialGradient(32,32,0,32,32,32)
+    gradient.addColorStop(0,'rgba(24,22,38,.65)')
+    gradient.addColorStop(.5,'rgba(24,22,38,.32)')
+    gradient.addColorStop(1,'rgba(24,22,38,0)')
+    ctx.fillStyle = gradient; ctx.fillRect(0,0,64,64)
+    return new CanvasTexture(c)
+  }, [])
   useEffect(() => {
-    let active = true
-    const texture = new TextureLoader().load(inkTexture, loaded => {
-      if (!active) return
-      ink.ink.value = loaded
-      ink.textureReady.value = 1
+    studio.mapping = EquirectangularReflectionMapping
+    studio.colorSpace = SRGBColorSpace
+    scene.environment = studio
+    const fine = matchMedia('(hover:hover) and (pointer:fine) and (min-width:768px)')
+    function move(event: PointerEvent) {
+      pointer.current.x = fine.matches && event.pointerType === 'mouse' ? event.clientX / innerWidth - .5 : 0
+      pointer.current.y = fine.matches && event.pointerType === 'mouse' ? event.clientY / innerHeight - .5 : 0
+    }
+    function wake() { if (!document.hidden && visible.current) invalidate() }
+    const observer = new IntersectionObserver(() => {
+      const a = dom.slot.getBoundingClientRect(), b = dom.work.getBoundingClientRect()
+      visible.current = (a.bottom > 0 && a.top < innerHeight) || (b.bottom > 0 && b.top < innerHeight)
       invalidate()
     })
-    return () => { active = false; texture.dispose(); ink.ink.value = null; ink.textureReady.value = 0 }
-  }, [inkTexture, ink, invalidate])
-
-  useEffect(() => {
-    slot.current = document.querySelector('.workstation')
-    const source = document.getElementById(heroId)
-    hero.current = source
-    playback.invalidate = invalidate
-    function move(event: PointerEvent) {
-      if (event.pointerType !== 'mouse') return
-      pointer.current = { x: event.clientX, y: event.clientY }
-      if (hero.current && hero.current.getBoundingClientRect().bottom > 0) invalidate()
-    }
-    function leave() { pointer.current = null; playback.orb.moved = false; invalidate() }
+    observer.observe(dom.slot); observer.observe(dom.work)
     function lost(event: Event) { event.preventDefault(); onFailure() }
-    source?.addEventListener('pointermove', move, { passive: true })
-    source?.addEventListener('pointerleave', leave)
     gl.domElement.addEventListener('webglcontextlost', lost)
-    return () => {
-      delete playback.invalidate
-      source?.removeEventListener('pointermove', move)
-      source?.removeEventListener('pointerleave', leave)
-      gl.domElement.removeEventListener('webglcontextlost', lost)
-    }
-  }, [heroId, gl, invalidate, onFailure, playback])
-
-  useEffect(() => {
+    window.addEventListener('pointermove', move, { passive: true })
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('scroll', wake, { passive: true })
+    const changes = new MutationObserver(wake)
+    changes.observe(document.documentElement, { attributes:true, attributeFilter:['data-theme','data-studio'] })
+    let texture: CanvasTexture | undefined
     const disconnect = subscribeToSakugaSurface(canvas => {
-        if (effects.image.value?.image !== canvas) {
-          effects.image.value?.dispose()
-          effects.image.value = new CanvasTexture(canvas)
-          effects.image.value.colorSpace = SRGBColorSpace
-        }
-        effects.image.value.needsUpdate = true
-        invalidate()
+      if (!texture) { texture = new CanvasTexture(canvas); texture.colorSpace = SRGBColorSpace }
+      texture.needsUpdate = true
+      overlay.current.material.map = texture
+      overlay.current.material.visible = true
+      overlay.current.material.needsUpdate = true
+      if (visible.current) wake()
     })
     return () => {
-      disconnect()
-      effects.image.value?.dispose()
-      effects.image.value = null
+      disconnect(); texture?.dispose(); observer.disconnect()
+      scene.environment = null
+      shadowMap.dispose()
+      changes.disconnect()
+      window.removeEventListener('scroll', wake)
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('pointermove', move)
+      gl.domElement.removeEventListener('webglcontextlost', lost)
     }
-  }, [effects, invalidate])
-
-  useFrame((_, dt) => {
-    if (gl.getContext().isContextLost()) return
-    const rect = slot.current?.getBoundingClientRect()
-    const heroVisible = (hero.current?.getBoundingClientRect().bottom ?? 0) > 0
-    const { width, height } = size
-    const slotVisible = !!rect && rect.bottom > 0 && rect.top < height && rect.width > 0
-    laptop.bounds.value.set(0, 0, 0, 0)
-    if (slotVisible) {
-      const dpr = gl.getPixelRatio()
-      const pixelWidth = Math.max(1, Math.round(rect.width * dpr))
-      const pixelHeight = Math.max(1, Math.round(rect.height * dpr))
-      if (target.width !== pixelWidth || target.height !== pixelHeight) {
-        target.setSize(pixelWidth, pixelHeight)
-        laptopCamera.aspect = rect.width / rect.height
-        laptopCamera.updateProjectionMatrix()
-      }
-      gl.setRenderTarget(target)
-      gl.render(laptopScene, laptopCamera)
-      gl.setRenderTarget(null)
-      laptop.pitch.value = 5 * dpr
-      laptop.bounds.value.set((2 * rect.left + rect.width) / width - 1, 1 - (2 * rect.top + rect.height) / height, rect.width / width, rect.height / height)
+  }, [studio, scene, dom, gl, invalidate, onFailure, shadowMap])
+  useFrame(({ clock }, delta) => {
+    if (document.hidden) return
+    if (!visible.current && painted.current) { gl.clear(); return }
+    const p = playback.progress, dt = Math.min(.06,delta)
+    const { width:w, height:h } = size
+    const slot = dom.slot.getBoundingClientRect(), stage = dom.stage.getBoundingClientRect()
+    const join = phase(scrollY, 0, Math.max(1,dom.work.getBoundingClientRect().top + scrollY))
+    const open = phase(p,0,.2), approach = phase(p,.04,.25)
+    const header = dom.header.offsetHeight
+    const usable = h - header
+    const night = document.documentElement.dataset.theme === 'night' ? 1 : 0
+    theme.current = MathUtils.damp(theme.current, night, 6, dt)
+    const n = theme.current
+    metal.current.color.copy(colors[0]).lerp(colors[1],n)
+    scene.environmentIntensity = mix(1.45,.7,n)
+    key.current.intensity = mix(3,1.45,n)
+    spill.current.intensity = open * mix(.3,5,n)
+    display.current.emissive.copy(colors[2]).lerp(colors[3],n)
+    display.current.emissiveIntensity = open * mix(.5,1.6,n)
+    if ('opacity' in shadow.current.material) shadow.current.material.opacity = mix(.75,1,n)
+    const tilt = 1 - join
+    root.current.rotation.set(MathUtils.damp(root.current.rotation.x,mix(.57,.18,join) + tilt * pointer.current.y*.09,10,dt), MathUtils.damp(root.current.rotation.y,tilt*(-.37 + pointer.current.x*.14),8,dt), tilt*.035)
+    hinge.current.rotation.x = -open * Math.PI * 100/180
+    // Convert desired screen framing to camera distance along its optical axis.
+    const readingZoom = Math.max(Math.min(w*.90/4, usable*.86/2.45), Math.min(usable*.67,470)/2.45)
+    const finalZoom = Math.max(w/4,usable/2.45)*1.03
+    const zoom = mix(slot.width*.20, mix(Math.min(w*.19,usable*.30), readingZoom*(1+.06*phase(p,.25,.85)), approach),join)
+    const pixelsPerUnit = mix(zoom,finalZoom,phase(p,.9,1))
+    root.current.position.set(0,0,0)
+    root.current.updateMatrixWorld(true)
+    const center = points[0].set(0,-.056,1.28).applyMatrix4(hinge.current.matrixWorld)
+    const x = mix(slot.left+slot.width*.5, w*.5,join)
+    const y = mix(slot.top+slot.height*.47+Math.sin(clock.elapsedTime*1.35)*3,stage.top+header+usable*mix(.59,.52,approach),join)
+    const fieldHeight = 2 * Math.tan(MathUtils.degToRad(camera.fov) / 2)
+    camera.position.set(center.x * approach, center.y * approach, center.z * approach + h / (fieldHeight * pixelsPerUnit))
+    camera.setViewOffset(w,h,w/2-x,h/2-y,w,h)
+    camera.updateMatrixWorld()
+    const upper = points[1].set(-2,-.06,2.505).applyMatrix4(hinge.current.matrixWorld).project(camera)
+    const lower = points[2].set(2,-.06,.055).applyMatrix4(hinge.current.matrixWorld).project(camera)
+    if (p >= .18 && dom.stage.dataset.cards === 'true') {
+      const left = Math.max(4,(upper.x+1)*w/2), right = Math.min(w-4,(lower.x+1)*w/2)
+      const top = (1-upper.y)*h/2-stage.top, bottom = (1-lower.y)*h/2-stage.top
+      const css = dom.screen.style
+      css.width = Math.max(1,right-left)+'px'; css.height = Math.max(1,bottom-top)+'px'
+      css.transform = 'translate3d('+left+'px,'+top+'px,0)'
     }
-    if (heroVisible && rect && playback.progress === 0) {
-      const fallbackX = (rect.left + rect.width / 2) / width
-      const fallbackY = (rect.top + rect.height / 2) / height
-      const x = (pointer.current?.x ?? fallbackX * width) / width
-      const y = (pointer.current?.y ?? fallbackY * height) / height
-      if (!orbInitialized.current) {
-        ink.orb.value.set(fallbackX, fallbackY)
-        orbInitialized.current = true
-      }
-      ink.orb.value.x = MathUtils.damp(ink.orb.value.x, x, 8, dt)
-      ink.orb.value.y = MathUtils.damp(ink.orb.value.y, y, 8, dt)
-      playback.orb.x = ink.orb.value.x
-      playback.orb.y = ink.orb.value.y
-      playback.orb.moved = pointer.current !== null
-    }
-    const progress = playback.progress
-    if (progress > 0 && progress < 1) ink.orb.value.set(playback.origin.x, playback.origin.y)
-    ink.orbSize.value = (heroVisible || (progress > 0 && progress < .47))
-      ? 17 / height * (1 - phase(progress, 0, .33)) : 0
-    ink.progress.value = progress <= .5 ? phase(progress, 0, .5) * .5
-      : progress < .96 ? .5 + phase(progress, .5, .96) * .5 : 0
-    ink.origin.value.set(playback.origin.x, playback.origin.y)
-    ink.aspect.value = width / height
-    gl.render(scene, camera)
+    const overlayScale = .5 * fieldHeight / h
+    overlay.current.position.set(camera.position.x+(w/2-x)*overlayScale,camera.position.y+(y-h/2)*overlayScale,camera.position.z-.5)
+    overlay.current.scale.set(w*overlayScale,h*overlayScale,1)
+    gl.render(scene,camera)
     if (!painted.current) { painted.current = true; onPaint() }
-    if (heroVisible && !document.hidden) invalidate()
-  }, 1)
-
+    if (visible.current && (join < 1 || Math.abs(root.current.rotation.x - .18) > .001 || Math.abs(root.current.rotation.y) > .001 || Math.abs(night - n) > .002)) invalidate()
+  },1)
   return <>
-    {createPortal(<>
-      <ambientLight intensity={.95} />
-      <directionalLight position={[2, 4, 4]} intensity={2.3} />
-      <Laptop playback={playback} />
-    </>, laptopScene)}
-    {materials.map((material, index) => <mesh key={material.uuid} frustumCulled={false} renderOrder={index + 1} material={material}>
-      <planeGeometry args={[2, 2]} />
-    </mesh>)}
+    <ambientLight intensity={.48} />
+    <directionalLight ref={key} position={[-3,5,4]} />
+    <directionalLight position={[4,2,-2]} intensity={1.8} color="#ced7ff" />
+    <group ref={root}>
+      <mesh ref={shadow} position={[0,-.24,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[5.8,4.4]} /><meshBasicMaterial transparent map={shadowMap} depthWrite={false} /></mesh>
+      <RoundedBox args={[4.22,.14,2.72]} radius={.065} smoothness={3}>
+        <meshPhysicalMaterial ref={metal} metalness={.88} roughness={.62} roughnessMap={grain} anisotropy={.45} />
+      </RoundedBox>
+      <RoundedBox args={[3.66,.022,1.21]} radius={.01} position={[0,.08,-.37]}><meshStandardMaterial color="#303039" /></RoundedBox>
+      <Keyboard />
+      <RoundedBox args={[1.43,.016,.69]} radius={.007} position={[0,.078,.73]}><meshStandardMaterial color="#989da7" metalness={.65} roughness={.36} /></RoundedBox>
+      <mesh position={[0,.135,-1.25]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.095,.095,3.5,20]} /><meshStandardMaterial color="#737783" metalness={.82} roughness={.28} /></mesh>
+      <group ref={hinge} position={[0,.19,-1.27]}>
+        <RoundedBox position={[0,0,1.28]} args={[4.22,.094,2.64]} radius={.045} smoothness={3}><meshPhysicalMaterial color="#aaaeba" metalness={.94} roughness={.57} roughnessMap={grain} anisotropy={.6} /></RoundedBox>
+        <mesh position={[0,-.05,1.28]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[4.15,2.57]} /><meshStandardMaterial color="#13131a" roughness={.25} /></mesh>
+        <mesh position={[0,-.055,1.28]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[4,2.45]} /><meshStandardMaterial ref={display} color="#302e3c" /></mesh>
+        <pointLight ref={spill} position={[0,-.8,1.2]} color="#fa65c3" distance={5} />
+      </group>
+    </group>
+    <sprite ref={overlay} renderOrder={10}><spriteMaterial transparent opacity={1} alphaTest={.001} color="white" depthTest={false} depthWrite={false} toneMapped={false} visible={false} /></sprite>
   </>
 }
 
-export default function Workstation(props: CanvasProps): ReactNode {
-  return <div className="r3f-layer" aria-hidden="true">
-    <CanvasBoundary onFailure={props.onFailure}>
-      <Canvas dpr={[1, 1.5]} frameloop="demand" style={{ pointerEvents: 'none' }} gl={{ alpha: true, antialias: true }}>
-        <SceneFrame {...props} />
-      </Canvas>
-    </CanvasBoundary>
-  </div>
+export default function Workstation(props: Props): ReactNode {
+  return <div className="r3f-layer" aria-hidden="true"><Boundary fail={props.onFailure}>
+    <Canvas style={{ pointerEvents: 'none' }} camera={{ position:[0,0,20], fov:32, near:.1, far:100 }} frameloop="demand" dpr={[1,1.5]} gl={{ alpha:true, antialias:true }}>
+      <Laptop {...props} />
+    </Canvas>
+  </Boundary></div>
 }

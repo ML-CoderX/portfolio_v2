@@ -34,7 +34,7 @@ export const copy = {
   theme: { label: 'Night mode', day: 'Day', night: 'Night' },
   skip: 'Skip to content', nav: 'Main navigation', menu: 'Menu',
   ready: '[CH.01 // READY]', resume: 'Résumé', download: 'Download full dossier',
-  github: 'GitHub', demo: 'Live demo', open: 'Open dossier', close: 'Close dossier',
+  chooseProject: 'Choose a project', allWork: 'See all my work', github: 'GitHub', demo: 'Live demo', open: 'Open dossier', close: 'Close dossier',
   blueprint: 'Architecture blueprint', technologies: 'Technologies',
   top: 'Back to top', email: 'Email', copy: 'Copy',
   copied: 'Email copied!', copyFailed: 'Email selected. Use your device’s copy command.',

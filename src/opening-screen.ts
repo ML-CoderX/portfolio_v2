@@ -63,8 +63,8 @@ export function useOpeningScreen() {
 
     sakuga.addEventListener('sakuga:done', holdCompletionFrame)
     fallback.value = .38
-    const image = document.querySelector<HTMLImageElement>('.workstation > img')
-    void Promise.allSettled([document.fonts?.load('1em "Bebas Neue"'), image?.decode()]).then(() => {
+
+    void Promise.allSettled([document.fonts?.load('1em "Bebas Neue"')]).then(() => {
       if (!active) return
       assetsReady = true
       fallback.value = .76

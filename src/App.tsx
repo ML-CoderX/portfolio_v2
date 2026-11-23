@@ -1,8 +1,6 @@
 import { copy, profile, timeline, toolkit } from './content'
 import { ActionLink, LinkEffects, useSakuga } from './sakuga'
-import { useEnhancements } from './enhancements'
-import { Scene, SceneArtwork, Transition } from './Scene'
-import { heroToWork } from './scenes'
+import { Scene, WorkSequence } from './Scene'
 import { sceneImage } from './scene-art'
 import { ThemeSwitch } from './ThemeSwitch'
 import { useOpeningScreen } from './opening-screen'
@@ -54,10 +52,7 @@ function Hero() {
       </div>
       <div className="hero-art">
         <span className="art-stamp" data-stamp>{h.badge}</span>
-        <figure className="workstation">
-          <img src="/workstation.svg" alt={h.alt} width="500" height="290" fetchPriority="high" />
-          <SceneArtwork id="hero" />
-        </figure>
+        <div className="workstation" aria-hidden="true"><span className="closed-fallback" /></div>
         <div className="terminal">
           <div className="terminal-bar"><span aria-hidden="true"><i /><i /><i /></span>{h.terminal}</div>
           <div className="terminal-body">
@@ -120,12 +115,12 @@ function Contact({ copyEffect, toast }: { copyEffect: boolean; toast: boolean })
 export function App() {
   useOpeningScreen()
   const sakuga = useSakuga()
-  useEnhancements()
+
   return <>
     <Navigation effectsReady={sakuga.button} />
     <LinkEffects ready={sakuga.button} />
     <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
-    <Transition config={heroToWork} />
+    <WorkSequence />
     <footer className="footer"><div className="frame"><p>{copy.footer}</p><nav aria-label={copy.contact.title}>{profile.socials.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href={'mailto:' + profile.email}>{copy.email}</a></nav><a className="comic-action" href="#hero"><Icon name="arrow_upward" />{copy.top}</a></div></footer>
   </>
 }

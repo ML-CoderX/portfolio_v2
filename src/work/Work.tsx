@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { copy, projects, type Project } from '../content'
+import { createPortal } from 'react-dom'
+import { copy, profile, projects, type Project } from '../content'
 import { ActionLink, Chip } from '../sakuga'
 import { Scene } from '../Scene'
 import { Icon } from '../Icon'
@@ -30,15 +31,17 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
     return () => { if (current?.open) current.close() }
   }, [ready])
 
+  const openedAt = useRef(0)
   const { title } = dossier
   return ready ? <>
     <button type="button" ref={opener} className="comic-action pink" data-sfx={copy.effects.impact} onClick={() => {
+      openedAt.current = scrollY
       dialog.current?.showModal()
-      close.current?.focus()
+      close.current?.focus({ preventScroll: true })
     }}>
       <Icon name="folder_open" />{copy.open}<span className="sr-only"> · {project.title}</span>
     </button>
-    <dialog ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={() => opener.current?.focus()} onKeyDown={event => {
+    {createPortal(<dialog data-lenis-prevent ref={dialog} aria-modal="true" aria-labelledby={project.id + '-dossier'} onClose={() => { window.scrollTo({ top: openedAt.current, behavior: 'instant' }); opener.current?.focus({ preventScroll: true }) }} onKeyDown={event => {
       if (event.key !== 'Tab') return
       const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'))
       const position = controls.findIndex(control => control === document.activeElement)
@@ -53,15 +56,15 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
       <div className="dialog-top"><span>{project.index}</span><button ref={close} autoFocus type="button" className="comic-action" onClick={() => dialog.current?.close()}>{copy.close}<Icon name="close" /></button></div>
       <h3 id={project.id + '-dossier'}>{title}</h3>
       <DossierBody dossier={dossier} repo={project.repo} />
-    </dialog>
+    </dialog>, document.body)}
   </> : <details className="dossier-disclosure"><summary className="comic-action pink">{copy.open}</summary><h4>{title}</h4><DossierBody dossier={dossier} repo={project.repo} /></details>
 }
 
 export function Work({ tooltips }: { tooltips: boolean }) {
   return <Scene id="work" className="site-section work-section">
-    <div className="frame">
+    <div className="frame studio-stage">
       <ChapterHeading chapter={copy.work} id="work-title" />
-      <div className="project-grid">
+      <div className="studio-screen"><div className="project-grid">
         {projects.map(project => <article className={`project panel ${project.span}`} key={project.id} data-reveal>
           <div className="panel-top"><span>{project.badge}</span><b>{project.index}</b></div>
           <h3>{project.title}</h3><p>{project.description}</p>
@@ -76,6 +79,11 @@ export function Work({ tooltips }: { tooltips: boolean }) {
             {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>}
           </div>}
         </article>)}
+        <div className="studio-final"><a className="comic-action pink" href={profile.socials.find(link => link.label === copy.github)?.href}>{copy.allWork}<Icon name="arrow_outward" /></a></div>
+      </div></div>
+      <div className="studio-dots" role="group" aria-label={copy.chooseProject}>
+        {[...projects.map(project => project.title), copy.allWork].map((name, index) =>
+          <button type="button" data-beat={index} aria-label={name} key={name} />)}
       </div>
     </div>
   </Scene>

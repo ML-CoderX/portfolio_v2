@@ -29,6 +29,8 @@ assert.equal($('a[href="/Saad_Resume.pdf"][download]').length, 1, 'Expected one 
 for (const field of ['og:title','og:description','og:url','og:image','og:image:alt']) {
   assert.ok($('meta[property="' + field + '"]').attr('content'), 'Missing ' + field)
 }
+assert.equal($('.email-box input').attr('value'), 'rsaadt3@gmail.com')
+assert.deepEqual([...new Set($('a[href^="mailto:"]').map((_, a) => $(a).attr('href')).get())], ['mailto:rsaadt3@gmail.com'])
 const schema = JSON.parse($('script[type="application/ld+json"]').text())
 assert.equal(schema['@type'], 'ProfilePage')
 assert.equal(schema.mainEntity['@type'], 'Person')

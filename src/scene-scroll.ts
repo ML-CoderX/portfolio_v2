@@ -1,212 +1,131 @@
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
-import { chapterTransitions, scenes, type SceneId, type SceneMode, type ScenePlayback, type TransitionConfig } from './scenes'
-import { preparePortal, prepareShot } from './shot-motion'
-import { startProjectMotion } from './work/project-motion'
+import { copy, projects } from './content'
+import { scenes, type SceneId } from './scenes'
 
-const nativeScrollKeys = new Set(['Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' '])
+export type StudioPlayback = { progress: number }
+const beatStart = .2
+const beatLength = .65 / projects.length
 
-export function startSceneScroll(config: TransitionConfig, playback: ScenePlayback) {
+export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   gsap.registerPlugin(ScrollTrigger)
   const root = document.documentElement
-  const energy = document.querySelector<HTMLElement>('[data-energy]')
-  const debug = document.querySelector<HTMLOutputElement>('[data-scene-debug]')
-  const chip = document.querySelector<HTMLElement>('[data-active-chapter]')
-  const initialChip = chip?.textContent ?? ''
-  const header = document.querySelector<HTMLElement>('.site-header')
-  const artwork = document.querySelector('.workstation')
-  const destination = document.getElementById(config.to)
-  const drawPortal = preparePortal(document.querySelector('[data-portal-shot]'))
-  const chapters = chapterTransitions.flatMap(chapter => {
-    const shot = document.querySelector<HTMLElement>(`[data-chapter-shot="${chapter.shot}"]`)
-    const section = document.getElementById(chapter.to)
-    return shot && section ? [{ chapter, shot, section, draw: prepareShot(shot), trigger: undefined as ScrollTrigger | undefined }] : []
-  })
-  const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-scene]'))
-  let mode: SceneMode = 'static'
-  let lenis: Lenis | undefined
-  let trigger: ScrollTrigger | undefined
-  let frame = 0
-  let active: SceneId = config.from
-  let projectMotion = { draw: () => {}, stop: () => {} }
-  const bridge = document.querySelector<SVGPathElement>('[data-ink-bridge]')
-  const sparklineEndpoint = document.querySelector('[data-sparkline-end]')
+  const work = document.getElementById('work')!
+  const stage = work.querySelector<HTMLElement>('.studio-stage')!
+  const track = stage.querySelector<HTMLElement>('.project-grid')!
+  const cards = Array.from(track.children) as HTMLElement[]
+  const dots = Array.from(stage.querySelectorAll<HTMLButtonElement>('[data-beat]'))
+  const debug = document.querySelector<HTMLOutputElement>('[data-scene-debug]')!
+  const chip = document.querySelector<HTMLElement>('[data-active-chapter]')!
+  const energy = document.querySelector<HTMLElement>('[data-energy]')!
+  const sections = [...document.querySelectorAll<HTMLElement>('[data-scene]')]
+  const header = document.querySelector<HTMLElement>('.site-header')!
+  const clickedHash = document.getElementById(location.hash.slice(1))
+  const hashVisible = clickedHash && Math.abs(clickedHash.getBoundingClientRect().top) < 140
+  debug.hidden = !new URLSearchParams(location.search).has('debug')
+  root.toggleAttribute('data-studio', enhanced)
+  if (enhanced && hashVisible) clickedHash.scrollIntoView({ behavior: 'instant' })
 
-  function reveal(section: HTMLElement, progress: number) {
-    section.style.setProperty('--scene-clip', `${(1 - progress) * 65}%`)
-    section.style.setProperty('--scene-fade', String(.12 + progress * .88))
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)')
+  const lenis = new Lenis({ smoothWheel: !reduce.matches, syncTouch: false, anchors: false,
+    prevent: element => !!element.closest('dialog,[data-lenis-prevent]') })
+  const tick = (seconds: number) => lenis.raf(seconds * 1000)
+  gsap.ticker.add(tick)
+  lenis.on('scroll', ScrollTrigger.update)
+  function syncMotion() { lenis.options.smoothWheel = !reduce.matches }
+  reduce.addEventListener('change', syncMotion)
+  function lock() {
+    if (document.querySelector('dialog[open]')) lenis.stop()
+    else if (lenis.isStopped) lenis.start()
   }
-
+  const modal = new MutationObserver(lock)
+  modal.observe(document.body, { attributes: true, attributeFilter: ['open'], subtree: true })
+  lock()
+  let beat = -2
   function update() {
-    frame = 0
-    projectMotion.draw()
+    const p = playback.progress
+    const unit = Math.max(0, (p - beatStart) / beatLength)
+    const base = Math.min(projects.length, Math.floor(unit))
+    const slide = gsap.utils.clamp(0, 1, (unit - base - .74) / .26)
+    const offset = Math.min(projects.length, base + slide * slide * (3 - 2 * slide))
+    const current = p < .19 ? -1 : Math.round(offset)
+    if (enhanced) {
+      track.style.transform = 'translate3d(' + (-100 * offset) + '%,0,0)'
+      if (current !== beat) {
+        cards.forEach((card, i) => { card.inert = i !== current })
+        dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === current)))
+        stage.dataset.cards = String(current >= 0)
+        beat = current
+      }
+    }
     const max = root.scrollHeight - innerHeight
-    const overall = max > 0 ? gsap.utils.clamp(0, 1, scrollY / max) : 0
-    const scrollPadding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0
-    const boundary = Math.max((header?.offsetHeight ?? 0) + 12, scrollPadding + 2)
-    let next: SceneId = config.from
-    for (const section of sections) {
-      if (section.getBoundingClientRect().top > boundary) break
-      next = section.dataset.scene as SceneId
-    }
-    // The final section can be shorter than the viewport on a direct hash or End.
-    const lastScene = sections.at(-1)?.dataset.scene as SceneId | undefined
-    if (lastScene && max > 0 && scrollY >= max - 2) next = lastScene
-    const progress = trigger?.progress ?? 0
-    if (progress > 0 && playback.progress === 0) {
-      const rect = artwork?.getBoundingClientRect()
-      playback.origin.x = playback.orb.moved ? playback.orb.x : rect ? gsap.utils.clamp(0, 1, (rect.left + rect.width / 2) / innerWidth) : .5
-      playback.origin.y = playback.orb.moved ? playback.orb.y : rect ? gsap.utils.clamp(0, 1, (rect.top + rect.height / 2) / innerHeight) : .5
-    }
-    if (playback.progress !== progress || next === config.from || active === config.from) playback.invalidate?.()
-    playback.progress = progress
-    const desktop = mode === 'webgl'
-    if (bridge) {
-      const rect = sparklineEndpoint?.getBoundingClientRect()
-      const amount = desktop ? Math.min(1, progress / .25) : 0
-      bridge.style.opacity = String(amount * (1 - Math.min(1, Math.max(0, (progress - .25) / .2))))
-      bridge.style.strokeDashoffset = String(1 - amount)
-      if (rect && amount > 0) {
-        const x = rect.left + rect.width / 2
-        const y = rect.top + rect.height / 2
-        const endX = playback.origin.x * innerWidth
-        const endY = playback.origin.y * innerHeight
-        bridge.setAttribute('d', `M${x} ${y} C${x + 70} ${y} ${endX + 70} ${endY} ${endX} ${endY}`)
-      }
-    }
-    if (desktop) drawPortal(progress)
-    root.toggleAttribute('data-ink-spill', progress > 0 && progress < 1)
-    if (energy) energy.style.transform = `scaleX(${overall})`
-    if (destination && mode === 'css') reveal(destination, progress)
-    let currentShot = ''
-    for (const { chapter, draw, section, trigger } of chapters) {
-      if (!trigger) continue
-      if (desktop) draw(trigger.progress)
-      else reveal(section, trigger.progress)
-      if (trigger.isActive) currentShot = ` · ${chapter.from} → ${chapter.to} ${Math.round(trigger.progress * 100)}%`
-    }
-    if (next !== active || root.dataset.activeScene === undefined) {
-      active = next
-      root.dataset.activeScene = active
-      if (chip) {
-        chip.dataset.chapter = 'CH.' + scenes[active].chapter
-        chip.textContent = initialChip.replace('CH.01', chip.dataset.chapter)
-      }
-    }
-    if (debug && !debug.hidden) debug.value = `${active.toUpperCase()} · ${Math.round(overall * 100)}%${currentShot || ` · ${config.from} → ${config.to} ${Math.round(progress * 100)}%`}`
+    energy.style.transform = 'scaleX(' + (max ? scrollY / max : 0) + ')'
+    const active = scrollY >= max - 2 ? 'contact' : sections.filter(s => s.getBoundingClientRect().top <= header.offsetHeight + 34).at(-1)?.id as SceneId || 'hero'
+    chip.dataset.chapter = 'CH.' + scenes[active].chapter
+    chip.textContent = copy.ready.replace('CH.01', chip.dataset.chapter)
+    if (!debug.hidden) debug.value = active + ' · ' + Math.round(p * 100) + '% · ' + (enhanced ? projects[current]?.title ?? (current < 0 ? 'Lid opening' : copy.allWork) : 'Static grid')
   }
-
-  function schedule() { if (!frame) frame = requestAnimationFrame(update) }
-  function tick(seconds: number) { lenis?.raf(seconds * 1000) }
-  function syncScroll() { ScrollTrigger.update(); schedule() }
-  function stopAnchor() {
-    if (lenis?.isScrolling !== 'smooth') return
-    lenis.stop()
-    lenis.start()
+  const trigger = enhanced ? ScrollTrigger.create({ trigger: work, start: 'top top', end: 'bottom bottom',
+    onUpdate: self => { playback.progress = self.progress; update() },
+    onRefresh: self => { playback.progress = self.progress; update() } }) : undefined
+  function go(index: number) {
+    if (trigger) lenis.scrollTo(trigger.start + (trigger.end - trigger.start) * (beatStart + beatLength * index + .025), { immediate: true })
   }
-  function nativeScroll() {
-    // Scrollbar drags can scroll the page without dispatching a pointer event.
-    if (lenis?.isScrolling === 'smooth' && Math.abs(lenis.animatedScroll - scrollY) > 3) stopAnchor()
-    schedule()
+  function select(event: MouseEvent) {
+    const target = (event.target as Element).closest<HTMLButtonElement>('[data-beat]')
+    if (target) go(Number(target.dataset.beat))
   }
-  function keydown(event: KeyboardEvent) {
-    if (nativeScrollKeys.has(event.key)) stopAnchor()
+  let touch: Touch | undefined
+  function begin(event: TouchEvent) { touch = event.touches[0] }
+  function swipe(event: TouchEvent) {
+    if (!touch || beat < 0 || document.querySelector('dialog[open]')) return
+    const dx = event.changedTouches[0].clientX - touch.clientX
+    const dy = event.changedTouches[0].clientY - touch.clientY
+    if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.4) go(gsap.utils.clamp(0, projects.length, beat - Math.sign(dx)))
+    touch = undefined
   }
-
-  function followAnchor(event: MouseEvent) {
-    if (!lenis || event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="#"]')
-    if (!link || link.hasAttribute('download') || link.target || link.classList.contains('skip')) return
+  function interrupt(event: KeyboardEvent) {
+    if (['Home','End','PageDown','PageUp','ArrowUp','ArrowDown',' '].includes(event.key) && lenis.isScrolling === 'smooth') {
+      lenis.stop()
+      lenis.start()
+    }
+  }
+  function anchor(event: MouseEvent) {
+    const link = (event.target as Element).closest<HTMLAnchorElement>('a[href^="#"]')
+    if (!link || event.defaultPrevented || event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const target = document.getElementById(link.hash.slice(1))
-    if (!target) return
+    if (!target || link.classList.contains('skip')) return
     event.preventDefault()
     if (location.hash !== link.hash) history.pushState(null, '', link.hash)
-    if (!target.hasAttribute('tabindex')) target.tabIndex = -1
+    target.tabIndex = -1
     target.focus({ preventScroll: true })
-    lenis.scrollTo(target, { duration: .55 })
+    const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0
+    const destination = scrollY + target.getBoundingClientRect().top - padding
+    lenis.scrollTo(destination, { duration: .5, immediate: reduce.matches })
   }
-
-  function clearReveal(section: HTMLElement | null) {
-    section?.style.removeProperty('--scene-clip')
-    section?.style.removeProperty('--scene-fade')
-  }
-
-  function disposeMotion() {
-    projectMotion.stop()
-    clearReveal(destination)
+  stage.addEventListener('click', select)
+  stage.addEventListener('touchstart', begin, { passive: true })
+  stage.addEventListener('touchend', swipe, { passive: true })
+  window.addEventListener('keydown', interrupt)
+  document.addEventListener('click', anchor)
+  window.addEventListener('scroll', update, { passive: true })
+  update()
+  return () => {
     trigger?.kill()
-    trigger = undefined
-    for (const chapter of chapters) {
-      chapter.trigger?.kill()
-      chapter.trigger = undefined
-      clearReveal(chapter.section)
-    }
-    lenis?.destroy()
-    lenis = undefined
+    modal.disconnect()
+    reduce.removeEventListener('change', syncMotion)
     gsap.ticker.remove(tick)
+    lenis.destroy()
+    stage.removeEventListener('click', select)
+    stage.removeEventListener('touchstart', begin)
+    stage.removeEventListener('touchend', swipe)
+    window.removeEventListener('keydown', interrupt)
+    document.removeEventListener('click', anchor)
+    window.removeEventListener('scroll', update)
+    root.removeAttribute('data-studio')
+    track.style.removeProperty('transform')
+    cards.forEach(card => { card.inert = false })
+    playback.progress = 0
   }
-
-  function setMode(next: SceneMode) {
-    if (next === mode) return
-    disposeMotion()
-    mode = next
-    projectMotion = startProjectMotion(mode)
-    if (mode !== 'static' && destination) {
-      lenis = new Lenis({ autoRaf: false, smoothWheel: false, syncTouch: false, anchors: false })
-      gsap.ticker.add(tick)
-      lenis.on('scroll', syncScroll)
-      trigger = ScrollTrigger.create({
-        trigger: destination,
-        start: config.start,
-        end: config.end,
-        onUpdate: schedule,
-        onRefresh: schedule,
-      })
-      for (const entry of chapters) {
-        const desktop = mode === 'webgl'
-        entry.trigger = ScrollTrigger.create({
-          trigger: desktop && entry.chapter.trigger === 'shot' ? entry.shot : entry.section,
-          start: desktop ? entry.chapter.start : 'clamp(top 85%)',
-          end: desktop ? `clamp(${entry.chapter.end})` : 'clamp(top 25%)',
-          onUpdate: schedule,
-          onRefresh: schedule,
-        })
-      }
-    }
-    schedule()
-  }
-
-  if (debug) debug.hidden = !new URLSearchParams(location.search).has('debug')
-  const resize = new ResizeObserver(schedule)
-  resize.observe(document.body)
-  window.addEventListener('scroll', nativeScroll, { passive: true })
-  window.addEventListener('resize', schedule, { passive: true })
-  window.addEventListener('wheel', stopAnchor, { passive: true })
-  window.addEventListener('touchstart', stopAnchor, { passive: true })
-  window.addEventListener('pointerdown', stopAnchor, { passive: true })
-  window.addEventListener('popstate', stopAnchor)
-  window.addEventListener('keydown', keydown)
-  document.addEventListener('click', followAnchor)
-  schedule()
-
-  function dispose() {
-    disposeMotion()
-    cancelAnimationFrame(frame)
-    resize.disconnect()
-    window.removeEventListener('scroll', nativeScroll)
-    window.removeEventListener('resize', schedule)
-    window.removeEventListener('wheel', stopAnchor)
-    window.removeEventListener('touchstart', stopAnchor)
-    window.removeEventListener('pointerdown', stopAnchor)
-    window.removeEventListener('popstate', stopAnchor)
-    window.removeEventListener('keydown', keydown)
-    document.removeEventListener('click', followAnchor)
-    delete root.dataset.activeScene
-    root.removeAttribute('data-ink-spill')
-    if (chip) { delete chip.dataset.chapter; chip.textContent = initialChip }
-    if (debug) debug.hidden = true
-  }
-
-  return { setMode, dispose }
 }

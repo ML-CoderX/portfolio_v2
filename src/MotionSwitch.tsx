@@ -57,7 +57,7 @@ export function useMotionPreference() {
 }
 
 export function MotionSwitch({ enabled }: { enabled: boolean | undefined }) {
-  return <button className="motion-switch comic-action" type="button" role="switch"
+  return <button className="motion-switch" type="button" role="switch"
     aria-label={copy.motion.label} aria-checked={enabled ?? true} onClick={toggleMotion}>
     {copy.motion.label} <span aria-hidden="true">{enabled === false ? copy.motion.off : copy.motion.on}</span>
   </button>

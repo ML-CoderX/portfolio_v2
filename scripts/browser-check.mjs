@@ -38,7 +38,12 @@ async function verifyTheme(page, name) {
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'night')
   assert.equal(await theme.getAttribute('aria-checked'), 'true')
   assert.equal(await page.locator('sakuga-toggle').evaluate(toggle => toggle.checked), true)
-  assert.equal(await page.locator('.project').first().evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(38, 32, 49)')
+  const paperColor = await page.locator('.project').first().evaluate(card => {
+    const surface = !card.closest('[data-studio]') ? card
+      : card.querySelector(matchMedia('(max-width: 900px)').matches ? '.project-page' : '.project-caption')
+    return getComputedStyle(surface).backgroundColor
+  })
+  assert.equal(paperColor, 'rgb(38, 32, 49)')
   assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'), '#171321')
   await page.reload()
   await page.waitForFunction(() => document.querySelector('.theme-switch').getAttribute('aria-checked') === 'true')

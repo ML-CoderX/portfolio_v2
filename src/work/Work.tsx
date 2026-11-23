@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { copy, profile, projects, type Project } from '../content'
 import { ActionLink, Chip } from '../sakuga'
 import { Scene } from '../Scene'
+import { sceneImage } from '../scene-art'
 import { Icon } from '../Icon'
 import { ChapterHeading } from '../ChapterHeading'
 import { ProjectIllustration } from './ProjectIllustration'
@@ -74,23 +75,30 @@ function Dossier({ project, dossier }: { project: Project; dossier: DossierDetai
 }
 
 export function Work({ tooltips }: { tooltips: boolean }) {
+  const comicBackground = { '--studio-art': `url("${sceneImage('workBackdrop')}")` } as CSSProperties
   return <Scene id="work" className="site-section work-section">
     <div className="frame studio-stage">
       <ChapterHeading chapter={copy.work} id="work-title" />
-      <div className="studio-screen"><div className="project-grid">
-        {projects.map(project => <article className={`project panel ${project.span}`} key={project.id} data-reveal>
-          <div className="panel-top"><span>{project.badge}</span><b>{project.index}</b></div>
-          <h3>{project.title}</h3><p>{project.description}</p>
-          <ProjectIllustration project={project.id} />
-          <div className={'project-preview ' + project.id}>
-            {project.preview.map(item => <div key={item}>{item}</div>)}
+      <div className="studio-screen" style={comicBackground}><div className="project-grid">
+        {projects.map(project => <article className={`project panel ${project.span}`} key={project.id} data-project={project.id} data-reveal>
+          <div className="project-page">
+            <div className="project-caption">
+              <div className="panel-top"><span>{project.badge}</span><b>{project.index}</b></div>
+              <h3>{project.title}</h3><p>{project.description}</p>
+            </div>
+            <ProjectIllustration project={project.id} />
+            <div className="project-details">
+              <div className={'project-preview ' + project.id}>
+                {project.preview.map(item => <div key={item}>{item}</div>)}
+              </div>
+              {project.stack.length > 0 && <ul className="chips" aria-label={copy.technologies}>{project.stack.map(item => <li key={item}><Chip title={item} hint={project.title} enhanced={tooltips} /></li>)}</ul>}
+              {(project.dossier || project.demo || project.repo) && <div className="action-row">
+                {project.dossier && <Dossier project={project} dossier={project.dossier} />}
+                {project.demo && <ActionLink href={project.demo} appearance="pink" sfx={copy.effects.toolkit}><Icon name="launch" />{copy.demo}<span className="sr-only"> · {project.title}</span></ActionLink>}
+                {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>}
+              </div>}
+            </div>
           </div>
-          {project.stack.length > 0 && <ul className="chips" aria-label={copy.technologies}>{project.stack.map(item => <li key={item}><Chip title={item} hint={project.title} enhanced={tooltips} /></li>)}</ul>}
-          {(project.dossier || project.demo || project.repo) && <div className="action-row">
-            {project.dossier && <Dossier project={project} dossier={project.dossier} />}
-            {project.demo && <ActionLink href={project.demo} appearance="pink" sfx={copy.effects.toolkit}><Icon name="launch" />{copy.demo}<span className="sr-only"> · {project.title}</span></ActionLink>}
-            {project.repo && <a className="comic-action" href={project.repo}><Icon name="code" />{copy.github}<span className="sr-only"> · {project.title}</span></a>}
-          </div>}
         </article>)}
         <div className="studio-final"><a className="comic-action pink" href={profile.socials.find(link => link.label === copy.github)?.href}>{copy.allWork}<Icon name="arrow_outward" /></a></div>
       </div></div>

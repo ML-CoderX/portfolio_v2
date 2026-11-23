@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { copy, profile, timeline, toolkit } from './content'
 import { ActionLink, LinkEffects, useSakuga } from './sakuga'
 import { Scene, WorkSequence } from './Scene'
+import { ChapterShot, useChapterReveals } from './SceneShots'
 import { sceneImage } from './scene-art'
 import { ThemeSwitch } from './ThemeSwitch'
 import { MotionSwitch, useMotionPreference } from './MotionSwitch'
@@ -11,6 +13,30 @@ import { ChapterHeading } from './ChapterHeading'
 import { ContactActions } from './ContactActions'
 
 function Navigation({ effectsReady, motion }: { effectsReady: boolean; motion: boolean | undefined }) {
+  const menu = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const desktop = matchMedia('(min-width: 901px)')
+    const details = menu.current!
+    const sync = () => { details.open = desktop.matches }
+    const dismiss = (event: PointerEvent) => {
+      if (!desktop.matches && event.target instanceof Node && !details.contains(event.target)) details.open = false
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && details.open && !desktop.matches) {
+        details.open = false
+        details.querySelector('summary')?.focus()
+      }
+    }
+    sync()
+    desktop.addEventListener('change', sync)
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape)
+    return () => {
+      desktop.removeEventListener('change', sync)
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [])
   return <header className="site-header">
     <a className="skip" href="#main" data-link-impact>{copy.skip}</a>
     <div className="energy" aria-hidden="true"><span data-energy /></div>
@@ -18,15 +44,16 @@ function Navigation({ effectsReady, motion }: { effectsReady: boolean; motion: b
       <div className="brand-group"><a className="brand" href="#hero" data-link-impact>{profile.name}<i /></a><span className="ready" data-active-chapter>{copy.ready}</span></div>
       <nav aria-label={copy.nav} className="desktop-nav">{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
       <div className="header-actions">
-        <details className="mobile-nav" onClick={event => {
-          if ((event.target as Element).closest('a')) event.currentTarget.open = false
+        <ThemeSwitch effectsReady={effectsReady} motion={motion === true} />
+        <details className="header-menu" ref={menu} onClick={event => {
+          if ((event.target as Element).closest('a') && matchMedia('(max-width: 900px)').matches) event.currentTarget.open = false
         }}>
           <summary data-link-impact>{copy.menu}</summary>
-          <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
+          <div className="menu-panel">
+            <nav aria-label={copy.nav}>{copy.navLinks.map(link => <a key={link.href} href={link.href} data-link-impact>{link.label}</a>)}</nav>
+            <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" />{copy.resume}</ActionLink>
+          </div>
         </details>
-        <MotionSwitch enabled={motion} />
-        <ThemeSwitch effectsReady={effectsReady} motion={motion === true} />
-        <ActionLink href={profile.resume} sfx={copy.effects.download} appearance="pink"><Icon name="description" /><span className="header-resume-label">{copy.resume}</span></ActionLink>
       </div>
     </div>
   </header>
@@ -71,9 +98,7 @@ function Hero() {
 function About() {
   const a = copy.about
   return <Scene id="about" className="site-section section-tone">
-    <figure className="about-eyes" aria-hidden="true">
-      <img src={sceneImage('eyesPanel')} width="720" height="309" alt="" loading="lazy" decoding="async" />
-    </figure>
+    <ChapterShot shot="eyes" />
     <div className="frame">
     <ChapterHeading chapter={a} id="about-title" />
     <div className="about-grid">
@@ -105,7 +130,9 @@ function Toolkit() {
 
 function Contact({ copyEffect, toast }: { copyEffect: boolean; toast: boolean }) {
   const c = copy.contact
-  return <Scene id="contact" className="contact site-section section-tone"><div className="frame">
+  return <Scene id="contact" className="contact site-section section-tone">
+    <ChapterShot shot="curtains" />
+    <div className="frame">
     <div className="chapter-pill">{c.chapter} <b>{c.stamp}</b></div>
     <div className="contact-card panel">
       <span className="contact-stamp">{c.badge}</span>
@@ -121,10 +148,12 @@ function Contact({ copyEffect, toast }: { copyEffect: boolean; toast: boolean })
 export function App() {
   const motion = useMotionPreference()
   useOpeningScreen(motion === true)
+  useChapterReveals(motion === true)
   const sakuga = useSakuga(motion === true)
 
   return <>
     <Navigation effectsReady={sakuga.button} motion={motion} />
+    <MotionSwitch enabled={motion} />
     <LinkEffects ready={sakuga.button} />
     <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
     {motion && <WorkSequence />}

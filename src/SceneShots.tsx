@@ -1,4 +1,23 @@
+import { useEffect } from 'react'
 import { shotArtwork } from './scenes'
+
+export function useChapterReveals(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled || typeof IntersectionObserver === 'undefined') return
+    const shots = document.querySelectorAll<HTMLElement>('[data-chapter-shot]')
+    const observer = new IntersectionObserver(entries => {
+      for (const { target, isIntersecting } of entries) {
+        target.toggleAttribute('data-chapter-playing', isIntersecting)
+      }
+    }, { rootMargin: '0px 0px -78px 0px' })
+
+    for (const shot of shots) observer.observe(shot)
+    return () => {
+      observer.disconnect()
+      for (const shot of shots) shot.removeAttribute('data-chapter-playing')
+    }
+  }, [enabled])
+}
 
 const eyeOpenings = [
   { id: 'left', x: 249, outline: 'M194 176Q216 158 249 163Q279 161 299 191Q250 206 211 192Q197 186 194 176Z' },
@@ -7,8 +26,8 @@ const eyeOpenings = [
 
 function EyesDrawing() {
   return <div className="eye-art">
-    <img src={shotArtwork.eyesPanel} width="720" height="309" alt="" loading="lazy" />
-    <svg viewBox="0 0 720 309">
+    <img src={shotArtwork.eyesPanel} width="720" height="309" alt="" loading="lazy" decoding="async" />
+    <svg className="eye-gaze-overlay" viewBox="0 0 720 309">
       <defs>
         <linearGradient id="eye-white" x2="0" y2="1">
           <stop stopColor="#b2a9b4" />
@@ -25,7 +44,7 @@ function EyesDrawing() {
         {eyeOpenings.map(({ id, outline }) => <clipPath id={`eye-opening-${id}`} key={id}><path d={outline} /></clipPath>)}
       </defs>
       {eyeOpenings.map(({ id, x }) => <g key={id} clipPath={`url(#eye-opening-${id})`}>
-        <rect x={x - 30} y="159" width="60" height="40" fill="url(#eye-white)" />
+        <rect x={x - 60} y="156" width="120" height="51" fill="url(#eye-white)" />
         <g data-eye-gaze>
           <circle cx={x} cy="166.5" r="26.5" fill="url(#eye-pink)" stroke="#0b0b12" strokeWidth="1.8" />
           <circle cx={x} cy="166.5" r="25.6" fill="url(#iris-dots)" />
@@ -39,10 +58,9 @@ function EyesDrawing() {
 }
 
 export function ChapterShot({ shot }: { shot: 'eyes' | 'curtains' }) {
-  if (shot === 'eyes') return <div className="chapter-shot chapter-shot--eyes" data-chapter-shot="eyes" aria-hidden="true">
-    <div className="eye-panel"><EyesDrawing /></div>
-    <div className="ink-shutter" />
-  </div>
+  if (shot === 'eyes') return <figure className="about-eyes" data-chapter-shot="eyes" aria-hidden="true">
+    <EyesDrawing />
+  </figure>
 
   return <div className="chapter-shot chapter-shot--curtains" data-chapter-shot="curtains" aria-hidden="true">
     <div className="curtain curtain--left">

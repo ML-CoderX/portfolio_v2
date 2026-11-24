@@ -5,7 +5,7 @@ import { CanvasTexture, Color, DirectionalLight, EquirectangularReflectionMappin
   Mesh, MeshStandardMaterial, PerspectiveCamera, PointLight, Sprite, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
 import { subscribeToSakugaSurface } from './sakuga-runtime'
 import { Exhaust, Keyboard } from './LaptopDeck'
-import type { StudioPlayback } from './scene-scroll'
+import { studioTiming, type StudioPlayback } from './work/playback'
 
 type Props = { playback: StudioPlayback; onPaint: () => void; onFailure: () => void }
 const mix = MathUtils.lerp
@@ -110,7 +110,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     const slot = dom.slot.getBoundingClientRect(), stage = dom.stage.getBoundingClientRect()
     const work = dom.work.getBoundingClientRect()
     const join = phase(scrollY, 0, Math.max(1,work.top + scrollY))
-    const open = phase(p,0,.2), approach = phase(p,.04,.25)
+    const open = phase(p,0,studioTiming.lidOpen), approach = phase(p,.04,.25)
     const header = dom.header.offsetHeight
     const usable = h - header
     const night = document.documentElement.dataset.theme === 'night' ? 1 : 0
@@ -128,7 +128,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     // Convert desired screen framing to camera distance along its optical axis.
     const readingZoom = Math.max(Math.min(w*.90/screenWidth, usable*.86/screenHeight), Math.min(usable*.67,470)/screenHeight)
     const finalZoom = Math.max(w/screenWidth,usable/screenHeight)*1.03
-    const zoom = mix(slot.width*.20, mix(Math.min(w*.19,usable*.30), readingZoom*(1+.06*phase(p,.25,.85)), approach),join)
+    const zoom = mix(slot.width*.20, mix(Math.min(w*.19,usable*.30), readingZoom*(1+.06*phase(p,.25,studioTiming.lastProjectEnd)), approach),join)
     const pixelsPerUnit = mix(zoom,finalZoom,phase(p,.9,1))
     root.current.position.set(0,0,0)
     root.current.updateMatrixWorld(true)
@@ -141,7 +141,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     camera.updateMatrixWorld()
     const upper = points[1].set(-screenWidth/2,screenFace,screenZ+screenHeight/2).applyMatrix4(hinge.current.matrixWorld).project(camera)
     const lower = points[2].set(screenWidth/2,screenFace,screenZ-screenHeight/2).applyMatrix4(hinge.current.matrixWorld).project(camera)
-    if (p >= .18 && dom.stage.dataset.cards === 'true') {
+    if (dom.stage.dataset.cards === 'true') {
       const left = Math.max(4,(upper.x+1)*w/2), right = Math.min(w-4,(lower.x+1)*w/2)
       const top = (1-upper.y)*h/2-stage.top, bottom = (1-lower.y)*h/2-stage.top
       const css = dom.screen.style

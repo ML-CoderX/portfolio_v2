@@ -21,7 +21,7 @@ The Cashlio export described a ledger worker and DocuAI described OCR and FHIR n
 
 ## Placeholder destinations
 
-- All four project GitHub links use the repositories published on the current portfolio. The laptop demo uses its verified Streamlit deployment.
+- All four featured projects link to their repositories. Live demo buttons appear only when a project has a verified demo URL.
 - Cashlio’s sandbox and DocuAI’s API REPL are omitted pending hosted endpoints.
 - Contact and footer GitHub and LinkedIn use the published profiles. The unresolved X profile is omitted. The email link uses `mailto:rsaadt3@gmail.com`.
 - The brand and back-to-top controls use `#hero`. The Contact navigation item points to the real `#contact` section.

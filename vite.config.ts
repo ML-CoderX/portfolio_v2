@@ -36,4 +36,7 @@ function sceneArt(): Plugin {
   }
 }
 
-export default defineConfig({ plugins: [sceneArt(), react()] })
+export default defineConfig({
+  plugins: [sceneArt(), react()],
+  optimizeDeps: { entries: ['index.html'] },
+})

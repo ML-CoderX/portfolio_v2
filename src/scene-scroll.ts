@@ -2,7 +2,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { startNativeScroll } from './native-scroll'
 import { copy, projects } from './content'
 import { sceneChapters, type SceneId } from './scenes'
-import { progressForSlide, restoreProjectEvent, slideOffset, studioTiming, type StudioPlayback } from './work/playback'
+import { progressForSlide, restoreProjectEvent, slideAtProgress, type StudioPlayback } from './work/playback'
 
 export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   const root = document.documentElement
@@ -31,24 +31,47 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
 
   const scroll = startNativeScroll()
   let beat = -2
+  let readFraction = 0
+  let chapter: SceneId | undefined
+  function revealCardContent(keepFocusVisible = false) {
+    const card = cards[beat]
+    if (!card) return
+    let top = readFraction * (card.scrollHeight - card.clientHeight)
+    const focused = document.activeElement
+    if (keepFocusVisible && focused instanceof HTMLElement && card.contains(focused)) {
+      const rect = focused.getBoundingClientRect()
+      const focusTop = card.scrollTop + rect.top - card.getBoundingClientRect().top
+      top = Math.max(focusTop + rect.height - card.clientHeight, Math.min(top, focusTop))
+    }
+    card.scrollTop = top
+  }
+  const screenResize = enhanced ? new ResizeObserver(() => revealCardContent(true)) : undefined
+  screenResize?.observe(screen)
   function update() {
     const p = playback.progress
-    const offset = slideOffset(p, projects.length)
-    const current = p < studioTiming.screenVisible ? -1 : Math.round(offset)
+    const { offset, index: current, read } = slideAtProgress(p, projects.length)
     if (enhanced) {
       track.style.transform = 'translate3d(' + (-100 * offset) + '%,0,0)'
-      if (current !== beat) {
+      const changed = current !== beat
+      if (changed) {
         cards.forEach((card, i) => { card.inert = i !== current })
         dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === current)))
         stage.dataset.cards = String(current >= 0)
         beat = current
       }
+      if (changed || read !== readFraction) {
+        readFraction = read
+        revealCardContent()
+      }
     }
     const max = root.scrollHeight - innerHeight
     energy.style.transform = 'scaleX(' + (max ? scrollY / max : 0) + ')'
     const active = scrollY >= max - 2 ? 'contact' : sections.filter(s => s.getBoundingClientRect().top <= header.offsetHeight + 34).at(-1)?.id as SceneId || 'hero'
-    chip.dataset.chapter = 'CH.' + sceneChapters[active]
-    chip.textContent = copy.ready.replace('CH.01', chip.dataset.chapter)
+    if (chapter !== active) {
+      chapter = active
+      chip.dataset.chapter = 'CH.' + sceneChapters[active]
+      chip.textContent = copy.ready.replace('CH.01', chip.dataset.chapter)
+    }
     if (!debug.hidden) debug.value = active + ' · ' + Math.round(p * 100) + '% · ' + (enhanced ? projects[current]?.title ?? (current < 0 ? 'Lid opening' : copy.allWork) : 'Static grid')
   }
   function scrub(trigger: ScrollTrigger) {
@@ -75,9 +98,9 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     if (beat !== index) go(index)
   }
   let touch: Touch | undefined
-  function begin(event: TouchEvent) { touch = event.touches[0] }
+  function begin(event: TouchEvent) { touch = event.touches.length === 1 ? event.touches[0] : undefined }
   function swipe(event: TouchEvent) {
-    if (!touch || beat < 0 || document.querySelector('dialog[open]')) return
+    if (!touch || event.touches.length || beat < 0 || document.querySelector('dialog[open]')) return
     const dx = event.changedTouches[0].clientX - touch.clientX
     const dy = event.changedTouches[0].clientY - touch.clientY
     if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.4) go(Math.max(0, Math.min(projects.length, beat - Math.sign(dx))))
@@ -95,6 +118,7 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     const project = section === work && sectionTop <= header.offsetHeight && beat >= 0
       ? cards[Math.min(beat, projects.length - 1)] : undefined
     trigger?.kill()
+    screenResize?.disconnect()
     scroll.dispose()
     stage.removeEventListener('click', select)
     stage.removeEventListener(restoreProjectEvent, restoreProject)
@@ -104,7 +128,7 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     root.removeAttribute('data-studio')
     track.style.removeProperty('transform')
     for (const property of ['width', 'height', 'transform']) screen.style.removeProperty(property)
-    cards.forEach(card => { card.inert = false })
+    cards.forEach(card => { card.inert = false; card.scrollTop = 0 })
     delete stage.dataset.cards
     delete chip.dataset.chapter
     chip.textContent = copy.ready

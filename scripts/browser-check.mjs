@@ -19,6 +19,54 @@ async function selectBeat(page, index) {
   await page.waitForFunction(i => document.querySelector('[data-beat="' + i + '"]').getAttribute('aria-current') === 'true', index)
 }
 
+async function verifyScrollOverLaptop(browser) {
+  const page = await browser.newPage({ viewport: { width: 390, height: 740 }, hasTouch: true })
+  try {
+    await page.goto(baseURL)
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-studio'))
+    await selectBeat(page, 0)
+    const first = page.locator('#work article').first()
+    await page.waitForFunction(() => {
+      const card = document.querySelector('#work article')
+      return card.scrollHeight > card.clientHeight && card.clientHeight > 0
+    })
+    const bounds = await first.boundingBox()
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    const start = await page.evaluate(() => scrollY)
+    await page.mouse.wheel(0, 80)
+    await page.waitForFunction(top => scrollY > top + 40 && document.querySelector('#work article').scrollTop > 0, start)
+    const forward = await page.evaluate(() => scrollY)
+    await page.mouse.wheel(0, -80)
+    await page.waitForFunction(top => scrollY < top - 40, forward)
+    const touch = await page.context().newCDPSession(page)
+    const x = Math.round(bounds.x + bounds.width / 2)
+    const y = Math.round(bounds.y + bounds.height / 2)
+    const beforeSwipe = await page.evaluate(() => scrollY)
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] })
+    for (const distance of [25, 50, 75, 100]) {
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - distance }] })
+    }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await page.waitForFunction(top => scrollY > top + 30, beforeSwipe)
+    await touch.detach()
+    await page.mouse.wheel(0, 5000)
+    await page.waitForFunction(() => document.querySelector('#about').getBoundingClientRect().top < innerHeight)
+    await selectBeat(page, 0)
+    await first.getByRole('link', { name: /GitHub/ }).focus()
+    const beforeResize = await first.evaluate(card => card.clientWidth)
+    await page.setViewportSize({ width: 360, height: 740 })
+    await page.waitForFunction(width => document.querySelector('#work article').clientWidth < width, beforeResize)
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    assert.ok(await first.evaluate(card => {
+      const link = document.activeElement.getBoundingClientRect()
+      const bounds = card.getBoundingClientRect()
+      return link.top >= bounds.top - 1 && link.bottom <= bounds.bottom + 1
+    }), 'Keyboard focus must reveal the link in a tall card')
+  } finally {
+    await page.close()
+  }
+}
+
 async function verifyScenes(page) {
   await page.locator('.hero a[href="#work"]').first().click()
   await page.waitForFunction(() => location.hash === '#work' && Math.abs(document.getElementById('work').getBoundingClientRect().top - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)) < 3).catch(async error => { throw new Error('Work anchor ' + JSON.stringify(await page.evaluate(() => [location.hash,scrollY,document.getElementById('work').getBoundingClientRect().top,getComputedStyle(document.documentElement).scrollPaddingTop])), { cause: error }) })
@@ -138,7 +186,7 @@ async function interact(browser, name, options = {}) {
   await page.getByText('Email copied!', { exact: true }).waitFor()
   assert.equal(await page.evaluate(() => window.__copiedEmail), 'rsaadt3@gmail.com')
   assert.ok(await page.locator('.r3f-layer canvas, canvas.sakuga-fx').count() <= 1)
-  await verifyScenes(page, name, options.hasTouch)
+  await verifyScenes(page)
   await verifyTheme(page, name)
   await verifyMotionSwitch(page)
   assert.deepEqual(errors, [])
@@ -243,6 +291,7 @@ for (const name of names) {
       continue
     }
     await interact(browser, name + '-desktop', { viewport: { width: 1440, height: 900 } })
+    if (name === 'chrome') await verifyScrollOverLaptop(browser)
     await fallbacks(browser)
     if (name !== 'firefox') {
       await interact(browser, name + '-mobile', { ...devices[name === 'chrome' ? 'Pixel 7' : 'iPhone 15'] })

@@ -477,7 +477,7 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
   --studio-art-shade: #140e268c;
 }
 [data-studio] .project-grid { display: flex; width: 100%; height: 100%; gap: 0; }
-[data-studio] .project-grid > * { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; box-shadow: none; border: 0; }
+[data-studio] .project-grid > * { flex: 0 0 100%; width: 100%; height: 100%; overflow: hidden; box-shadow: none; border: 0; }
 [data-studio] .project {
   display: grid; align-content: center; align-content: safe center; align-items: start;
   grid-template-columns: minmax(0,1.24fr) minmax(0,1fr);
@@ -541,7 +541,6 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
 @media (max-width: 900px) {
   [data-studio] .project {
     display: block; padding: 12px 14px 18px;
-    scrollbar-width: thin; scrollbar-color: var(--paper) var(--ink);
   }
   [data-studio] .project-page {
     display: grid; gap: 14px; padding: clamp(12px, 3.5vw, 20px);
@@ -567,7 +566,7 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
     color: var(--reading-ink);
   }
   [data-studio] .project .panel-top span { color: var(--pill-type); }
-  [data-studio] .studio-screen { touch-action: pan-y; }
+  [data-studio] .studio-screen { touch-action: pan-y pinch-zoom; }
 }
 [data-studio] .work-section { overflow-anchor: none; }
 @media (max-width: 420px) {

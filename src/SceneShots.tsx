@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { shotArtwork } from './scenes'
+import { sceneArt } from './scene-art'
 
 export function useChapterReveals(enabled: boolean) {
   useEffect(() => {
@@ -26,7 +26,7 @@ const eyeOpenings = [
 
 function EyesDrawing() {
   return <div className="eye-art">
-    <img src={shotArtwork.eyesPanel} width="720" height="309" alt="" loading="lazy" decoding="async" />
+    <img src={sceneArt.eyesPanel} width="720" height="309" alt="" loading="lazy" decoding="async" />
     <svg className="eye-gaze-overlay" viewBox="0 0 720 309">
       <defs>
         <linearGradient id="eye-white" x2="0" y2="1">
@@ -62,7 +62,9 @@ export function ChapterShot({ shot }: { shot: 'eyes' | 'curtains' }) {
     <EyesDrawing />
   </figure>
 
-  return <div className="chapter-shot chapter-shot--curtains" data-chapter-shot="curtains" aria-hidden="true">
+  return <>
+    <img className="contact-stage" src={sceneArt.contactStage} alt="" loading="lazy" decoding="async" />
+    <div className="chapter-shot--curtains" data-chapter-shot="curtains" aria-hidden="true">
     <div className="curtain curtain--left">
       <svg viewBox="0 0 500 400" preserveAspectRatio="none">
         <g id="chapter-curtain" stroke="#0b0b12" strokeLinejoin="round">
@@ -76,5 +78,6 @@ export function ChapterShot({ shot }: { shot: 'eyes' | 'curtains' }) {
     <div className="curtain curtain--right">
       <svg viewBox="0 0 500 400" preserveAspectRatio="none"><use href="#chapter-curtain" /></svg>
     </div>
-  </div>
+    </div>
+  </>
 }

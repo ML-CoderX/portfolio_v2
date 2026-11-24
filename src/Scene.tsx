@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { afterPaint } from './after-paint'
 import { afterOpening } from './opening-screen'
-import { scenes, type SceneId } from './scenes'
+import type { SceneId } from './scenes'
 
 const Studio = lazy(() => import('./Workstation').catch(() => ({ default: MissingStudio })))
 function MissingStudio({ onFailure }: { onFailure: () => void }) {
@@ -11,9 +11,6 @@ function MissingStudio({ onFailure }: { onFailure: () => void }) {
 
 export function Scene({ id, className, children }: { id: SceneId; className: string; children: ReactNode }) {
   return <section id={id} className={className} aria-labelledby={id + '-title'} data-scene={id}>
-    {id !== 'hero' && scenes[id].layers.length > 0 && <div className="scene-art" aria-hidden="true">
-      {scenes[id].layers.map(layer => <img key={layer.name} className={'scene-layer ' + layer.name} src={layer.src} alt="" loading="lazy" />)}
-    </div>}
     {children}
   </section>
 }

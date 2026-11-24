@@ -1,14 +1,19 @@
-import { Component, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
+import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei/core/RoundedBox.js'
-import { CanvasTexture, Color, DirectionalLight, EquirectangularReflectionMapping, Group, InstancedMesh, Matrix4, MathUtils,
-  Mesh, MeshPhysicalMaterial, MeshStandardMaterial, PerspectiveCamera, PointLight, Sprite, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
+import { CanvasTexture, Color, DirectionalLight, EquirectangularReflectionMapping, Group, MathUtils,
+  Mesh, MeshStandardMaterial, PerspectiveCamera, PointLight, Sprite, SRGBColorSpace, TextureLoader, Vector3 } from 'three'
 import { subscribeToSakugaSurface } from './sakuga-runtime'
+import { Exhaust, Keyboard } from './LaptopDeck'
 import type { StudioPlayback } from './scene-scroll'
 
 type Props = { playback: StudioPlayback; onPaint: () => void; onFailure: () => void }
 const mix = MathUtils.lerp
 const phase = MathUtils.smoothstep
+const screenWidth = 4
+const screenHeight = screenWidth * 9 / 16
+const screenZ = 1.42
+const screenFace = -.052
 class Boundary extends Component<{ children: ReactNode; fail: () => void }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
@@ -16,35 +21,14 @@ class Boundary extends Component<{ children: ReactNode; fail: () => void }, { fa
   render() { return this.state.failed ? null : this.props.children }
 }
 
-function Keyboard() {
-  const keys = useRef<InstancedMesh>(null!)
-  useLayoutEffect(() => {
-    const matrix = new Matrix4()
-    const bottom = [-1.57,-1.31,-1.05,-.13,.85,1.11,1.37,1.63]
-    let index = 0
-    for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < (row === 4 ? bottom.length : 14); col++) {
-        matrix.makeScale(row === 4 && col === 3 ? 1.48 : .216,.032,.18)
-        matrix.setPosition(row === 4 ? bottom[col] : (col-6.5)*.25,.105,-.82+row*.225)
-        keys.current.setMatrixAt(index++,matrix)
-      }
-    }
-    keys.current.instanceMatrix.needsUpdate = true
-    keys.current.computeBoundingSphere()
-  }, [])
-  return <instancedMesh ref={keys} args={[undefined,undefined,64]}>
-    <boxGeometry /><meshStandardMaterial color="#40434e" roughness={.59} />
-  </instancedMesh>
-}
-
 function Laptop({ playback, onPaint, onFailure }: Props) {
   const { gl, invalidate, scene, size } = useThree()
   const camera = useThree(state => state.camera) as PerspectiveCamera
   const [studio, grain] = useLoader(TextureLoader, ['/studio-environment.jpg', '/brushed-metal.png'])
+  const shellFinish = { color: '#292a2c', metalness: .32, roughness: .79, specularIntensity: .36, bumpMap: grain, bumpScale: .0008 }
   const root = useRef<Group>(null!)
   const hinge = useRef<Group>(null!)
   const display = useRef<MeshStandardMaterial>(null!)
-  const metal = useRef<MeshPhysicalMaterial>(null!)
   const key = useRef<DirectionalLight>(null!)
   const spill = useRef<PointLight>(null!)
   const shadow = useRef<Mesh>(null!)
@@ -61,7 +45,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
   const theme = useRef(0)
   const visible = useRef(true)
   const points = useMemo(() => [new Vector3(), new Vector3(), new Vector3()], [])
-  const colors = useMemo(() => [new Color('#d4d8de'), new Color('#515670'), new Color('#f7eaff'), new Color('#c173ff')], [])
+  const screenGlow = useMemo(() => ({ day: new Color('#f7eaff'), night: new Color('#c173ff') }), [])
   const shadowMap = useMemo(() => {
     const c = document.createElement('canvas')
     c.width = c.height = 64
@@ -132,32 +116,31 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     const night = document.documentElement.dataset.theme === 'night' ? 1 : 0
     theme.current = MathUtils.damp(theme.current, night, 6, dt)
     const n = theme.current
-    metal.current.color.copy(colors[0]).lerp(colors[1],n)
     scene.environmentIntensity = mix(1.45,.7,n)
     key.current.intensity = mix(3,1.45,n)
     spill.current.intensity = open * mix(.3,5,n)
-    display.current.emissive.copy(colors[2]).lerp(colors[3],n)
+    display.current.emissive.copy(screenGlow.day).lerp(screenGlow.night,n)
     display.current.emissiveIntensity = open * mix(.5,1.6,n)
     if ('opacity' in shadow.current.material) shadow.current.material.opacity = mix(.75,1,n)
     const tilt = 1 - join
     root.current.rotation.set(MathUtils.damp(root.current.rotation.x,mix(.57,.18,join) + tilt * pointer.current.y*.09,10,dt), MathUtils.damp(root.current.rotation.y,tilt*(-.37 + pointer.current.x*.14),8,dt), tilt*.035)
     hinge.current.rotation.x = -open * Math.PI * 100/180
     // Convert desired screen framing to camera distance along its optical axis.
-    const readingZoom = Math.max(Math.min(w*.90/4, usable*.86/2.45), Math.min(usable*.67,470)/2.45)
-    const finalZoom = Math.max(w/4,usable/2.45)*1.03
+    const readingZoom = Math.max(Math.min(w*.90/screenWidth, usable*.86/screenHeight), Math.min(usable*.67,470)/screenHeight)
+    const finalZoom = Math.max(w/screenWidth,usable/screenHeight)*1.03
     const zoom = mix(slot.width*.20, mix(Math.min(w*.19,usable*.30), readingZoom*(1+.06*phase(p,.25,.85)), approach),join)
     const pixelsPerUnit = mix(zoom,finalZoom,phase(p,.9,1))
     root.current.position.set(0,0,0)
     root.current.updateMatrixWorld(true)
-    const center = points[0].set(0,-.056,1.28).applyMatrix4(hinge.current.matrixWorld)
+    const center = points[0].set(0,screenFace,screenZ).applyMatrix4(hinge.current.matrixWorld)
     const x = mix(slot.left+slot.width*.5, w*.5,join)
     const y = mix(slot.top+slot.height*.47+Math.sin(clock.elapsedTime*1.35)*3,stage.top+header+usable*mix(.59,.52,approach),join)
     const fieldHeight = 2 * Math.tan(MathUtils.degToRad(camera.fov) / 2)
     camera.position.set(center.x * approach, center.y * approach, center.z * approach + h / (fieldHeight * pixelsPerUnit))
     camera.setViewOffset(w,h,w/2-x,h/2-y,w,h)
     camera.updateMatrixWorld()
-    const upper = points[1].set(-2,-.06,2.505).applyMatrix4(hinge.current.matrixWorld).project(camera)
-    const lower = points[2].set(2,-.06,.055).applyMatrix4(hinge.current.matrixWorld).project(camera)
+    const upper = points[1].set(-screenWidth/2,screenFace,screenZ+screenHeight/2).applyMatrix4(hinge.current.matrixWorld).project(camera)
+    const lower = points[2].set(screenWidth/2,screenFace,screenZ-screenHeight/2).applyMatrix4(hinge.current.matrixWorld).project(camera)
     if (p >= .18 && dom.stage.dataset.cards === 'true') {
       const left = Math.max(4,(upper.x+1)*w/2), right = Math.min(w-4,(lower.x+1)*w/2)
       const top = (1-upper.y)*h/2-stage.top, bottom = (1-lower.y)*h/2-stage.top
@@ -184,17 +167,26 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     <directionalLight position={[4,2,-2]} intensity={1.8} color="#ced7ff" />
     <group ref={root}>
       <mesh ref={shadow} position={[0,-.24,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[5.8,4.4]} /><meshBasicMaterial transparent map={shadowMap} depthWrite={false} /></mesh>
-      <RoundedBox args={[4.22,.14,2.72]} radius={.065} smoothness={3}>
-        <meshPhysicalMaterial ref={metal} metalness={.88} roughness={.62} roughnessMap={grain} anisotropy={.45} />
+      <RoundedBox args={[4.13,.105,2.61]} position={[0,-.075,-.015]} radius={.049} smoothness={3}>
+        <meshStandardMaterial color="#1b1c1e" roughness={.84} />
       </RoundedBox>
-      <RoundedBox args={[3.66,.022,1.21]} radius={.01} position={[0,.08,-.37]}><meshStandardMaterial color="#303039" /></RoundedBox>
+      <RoundedBox args={[4.24,.14,2.74]} position={[0,.011,0]} radius={.035} smoothness={3}>
+        <meshPhysicalMaterial {...shellFinish} />
+      </RoundedBox>
+      <group position={[2.12,.003,-.76]} rotation={[0,Math.PI/2,0]}><Exhaust width={.73} fins={11} /></group>
+      {[-1.41,1.41].map(x => <group key={x} position={[x,.003,-1.37]} rotation={[0,Math.PI,0]}><Exhaust width={1.05} fins={16} /></group>)}
+      <RoundedBox args={[3.94,.015,1.25]} radius={.007} position={[0,.084,-.32]}><meshStandardMaterial color="#131416" roughness={.88} /></RoundedBox>
       <Keyboard />
-      <RoundedBox args={[1.43,.016,.69]} radius={.007} position={[0,.078,.73]}><meshStandardMaterial color="#989da7" metalness={.65} roughness={.36} /></RoundedBox>
-      <mesh position={[0,.135,-1.25]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.095,.095,3.5,20]} /><meshStandardMaterial color="#737783" metalness={.82} roughness={.28} /></mesh>
+      <RoundedBox args={[1.29,.01,.76]} radius={.004} position={[-.39,.083,.83]}><meshStandardMaterial color="#111214" roughness={.85} /></RoundedBox>
+      <RoundedBox args={[1.26,.008,.73]} radius={.003} position={[-.39,.089,.83]}><meshStandardMaterial color="#343537" metalness={.22} roughness={.76} /></RoundedBox>
+      {[-1.46,1.46].map(x => <mesh key={x} position={[x,.13,-1.27]} rotation={[0,0,Math.PI/2]}>
+        <cylinderGeometry args={[.085,.085,.62,20]} /><meshStandardMaterial color="#303133" metalness={.48} roughness={.67} />
+      </mesh>)}
       <group ref={hinge} position={[0,.19,-1.27]}>
-        <RoundedBox position={[0,0,1.28]} args={[4.22,.094,2.64]} radius={.045} smoothness={3}><meshPhysicalMaterial color="#aaaeba" metalness={.94} roughness={.57} roughnessMap={grain} anisotropy={.6} /></RoundedBox>
-        <mesh position={[0,-.05,1.28]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[4.15,2.57]} /><meshStandardMaterial color="#13131a" roughness={.25} /></mesh>
-        <mesh position={[0,-.055,1.28]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[4,2.45]} /><meshStandardMaterial ref={display} color="#302e3c" /></mesh>
+        <RoundedBox position={[0,0,1.28]} args={[4.21,.089,2.67]} radius={.033} smoothness={3}><meshPhysicalMaterial {...shellFinish} /></RoundedBox>
+        <mesh position={[0,-.048,1.28]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[4.14,2.64]} /><meshStandardMaterial color="#1b1c1e" roughness={.82} /></mesh>
+        <mesh position={[0,screenFace,screenZ]} rotation={[Math.PI/2,0,0]}><planeGeometry args={[screenWidth,screenHeight]} /><meshStandardMaterial ref={display} color="#302e3c" /></mesh>
+        <mesh position={[0,-.051,2.576]} rotation={[Math.PI/2,0,0]}><circleGeometry args={[.015,16]} /><meshStandardMaterial color="#10151a" metalness={.4} roughness={.28} /></mesh>
         <pointLight ref={spill} position={[0,-.8,1.2]} color="#fa65c3" distance={5} />
       </group>
     </group>

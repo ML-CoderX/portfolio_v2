@@ -42,8 +42,8 @@ export function ContactActions({ copyEffect, toastEffect }: { copyEffect: boolea
     <form className="email-box" action={emailLink} onSubmit={event => { event.preventDefault(); void copyEmail() }}>
       <input aria-label={copy.email} ref={email} readOnly value={profile.email} onFocus={event => event.currentTarget.select()} />
       {copyEffect
-        ? <sakuga-button ref={button} data-sfx={copy.effects.impact}>{copy.copy}</sakuga-button>
-        : <button type="submit" className="comic-action pink" data-sfx={copy.effects.impact}>{copy.copy}</button>}
+        ? <sakuga-button ref={button}>{copy.copy}</sakuga-button>
+        : <button type="submit" className="comic-action pink">{copy.copy}</button>}
     </form>
     <a className="email-link" href={emailLink}>{copy.email}</a>
     <p className="copy-status" role="status">{status}</p>

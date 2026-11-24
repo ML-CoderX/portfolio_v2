@@ -12,6 +12,8 @@ export type Project = {
   dossier?: { title: string; description: string; stages: readonly string[]; notes: readonly string[] }
 }
 
+export const githubProfile = { label: 'GitHub', href: 'https://github.com/ML-CoderX' }
+
 export const profile = {
   name: 'Saad AR',
   first: 'Saad',
@@ -24,7 +26,7 @@ export const profile = {
   description: 'Explore Saad AR’s machine learning, web, and mobile projects in a cel-shaded portfolio. See selected work, technical dossiers, and ways to get in touch.',
   ogAlt: 'Saad AR in bold pink and ink lettering beside a cel-shaded workstation',
   socials: [
-    { label: 'GitHub', href: 'https://github.com/ML-CoderX' },
+    githubProfile,
     { label: 'LinkedIn', href: 'https://www.linkedin.com/in/saadar' },
     // TODO: Add X when a public profile URL is available.
   ],
@@ -50,7 +52,7 @@ export const copy = {
     intro: 'I build machine learning models, web applications, and mobile tools. I care about how they work, how they feel, and how reliably they run.',
     work: 'Explore my work', toolkit: 'Inspect toolkit', act: 'ACT', exp: '[EXP]',
     scroll: 'Scroll to discover', badge: '■ WORKSTATION', badgeTwo: 'CASHLIO // WALKTHROUGH',
-    terminal: 'cashlio // walkthrough', alt: 'Cel-shaded laptop with a violet screen and pink keyboard',
+    terminal: 'cashlio // walkthrough',
     steps: ['Select profile', 'Record transaction', 'View summary'],
   },
   work: { chapter: '[CHAPTER 01 // SELECTED WORK]', stamp: '★ DOKAN!', title: 'Notable runs &', accent: 'missions', intro: 'Web, mobile, and machine learning projects. Open a dossier to see how Cashlio and DocuAI work.' },
@@ -58,17 +60,16 @@ export const copy = {
     chapter: '[CHAPTER 02 // ORIGIN STORY]', stamp: '★ CHARACTER FILE', title: 'Character bio &', accent: 'philosophy',
     alt: 'Manga-style portrait of a developer in glasses and a yellow-accented hoodie',
     log: 'DIALOGUE // FIRST-PERSON',
-    quote: '“Hey! I’m Saad — a developer who treats code like sakuga animation: every frame and algorithm crafted with deliberate weight, rhythm, and precision.”',
-    bio: 'I work across machine learning, web, and mobile development. I like following a project from the first experiment to an interface someone can actually use.',
+    quote: '“I’m Saad AR. I study computer science at Anjuman Institute of Technology and Management in Bhatkal. I like building things that answer a question someone actually has.”',
+    bio: 'My projects range from Cashlio, a mobile app for tracking personal finances, to DocuAI, a prototype my team built to help clinicians review symptoms. Both taught me to think about what someone needs to see on the screen to make a decision. I’d like to explore more projects in healthcare, productivity, and education.',
     facets: [
-      ['Careful evaluation', 'Check what a model gets right, where it fails, and how those failures affect the application.'],
-      ['Dual-wielding', 'Move between Python modeling and reactive TypeScript interfaces.'],
-      ['Rapid runtime', 'Keep the path from user input to useful feedback short.'],
+      ['Intelligent systems', 'I use Python and Pandas to explore data, then build and test prediction models with Scikit-learn.'],
+      ['Digital experiences', 'I build web and mobile apps with Angular and Ionic. In Cashlio, you can record an expense and see how it changes your spending for the month.'],
+      ['Connected ideas', 'I’m also interested in hardware and IoT, especially how an Arduino can take a sensor reading and share it over Bluetooth.'],
     ],
   },
   toolkit: { chapter: '[CHAPTER 03 // BATTLE RECORD & TOOLKIT]', stamp: '★ LOADOUT', title: 'Timeline &', accent: 'arsenal matrix', intro: 'Project milestones and the tools I use for data, web, and application development.', log: 'Project milestones' },
   contact: { chapter: '[FINAL CHAPTER // TRANSMISSION]', stamp: '⚡ CLIMAX', title: 'What comes', accent: 'next?', badge: 'SEND A TRANSMISSION', intro: 'Got a machine learning problem, a web application to build, or a project you’d like to discuss? Send me an email.' },
-  effects: { work: 'DODODO!', toolkit: 'ZWISH!', impact: 'BAM!', download: 'SHING!' },
 }
 
 export const projects: readonly Project[] = [

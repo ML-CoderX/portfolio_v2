@@ -1,14 +1,11 @@
 export type SakugaButton = HTMLElement & { done: () => void; impact: (origin?: HTMLElement) => void }
 export type SakugaToast = HTMLElement & { show: (message: string) => void }
 export type SakugaToggle = HTMLElement & { checked: boolean; flip: () => void }
-type Particle = { dead?: boolean }
 export type SakugaProgress = HTMLElement & { set(value: number, instant?: boolean): void }
 
 declare global {
   interface Window {
     SakugaFX?: {
-      persist: (draw: () => void) => Particle
-      g: CanvasRenderingContext2D
       calm: boolean
       clearFront?: () => void
       setSurfaceConsumer: (consumer: ((canvas: HTMLCanvasElement) => void) | null) => void

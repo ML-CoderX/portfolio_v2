@@ -8,7 +8,7 @@ declare module 'react' {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
-      'sakuga-button': Props<SakugaButton> & { variant?: string }
+      'sakuga-button': Props<SakugaButton>
       'sakuga-toast': Props<SakugaToast>
       'sakuga-tooltip': Props<HTMLElement> & { text: string; label: string }
       'sakuga-toggle': Props<SakugaToggle> & { label: string }
@@ -54,11 +54,11 @@ export function useSakuga(motion: boolean) {
   return motion ? ready : effectsOff
 }
 
-export function ActionLink({ href, children, appearance = '', sfx, download }: {
-  href: string; children: ReactNode; appearance?: string; sfx: string; download?: boolean
+export function ActionLink({ href, children, appearance = '', download }: {
+  href: string; children: ReactNode; appearance?: string; download?: boolean
 }) {
   // The anchor owns navigation, keyboard focus, and download behavior.
-  return <a href={href} download={download} data-link-impact data-sfx={sfx} className={'comic-action ' + appearance}>{children}</a>
+  return <a href={href} download={download} data-link-impact className={'comic-action ' + appearance}>{children}</a>
 }
 
 export function LinkEffects({ ready }: { ready: boolean }) {

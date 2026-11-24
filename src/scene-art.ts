@@ -1,12 +1,6 @@
-import { sceneAssetFiles } from './scene-asset-files'
+import eyesPanel from './assets/scenes/about/eyes-panel.webp?width=720&scene-art'
+import portrait from './assets/scenes/about/portrait.webp?width=640&scene-art'
+import contactStage from './assets/scenes/contact/stage.webp?width=1440&scene-art'
+import workBackdrop from './assets/scenes/work/backdrop.webp?width=1440&scene-art'
 
-const optimizedAssets = import.meta.glob<string>('../.scene-art/**/*.webp', {
-  eager: true, import: 'default', query: '?url',
-})
-
-export function sceneImage(name: keyof typeof sceneAssetFiles) {
-  const { file } = sceneAssetFiles[name]
-  const optimized = optimizedAssets['../.scene-art/' + file]
-  if (!optimized) throw new Error('Missing optimized scene artwork: ' + file)
-  return optimized
-}
+export const sceneArt = { eyesPanel, portrait, contactStage, workBackdrop }

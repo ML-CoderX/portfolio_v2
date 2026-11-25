@@ -69,6 +69,7 @@ export const copy = {
     ],
   },
   toolkit: { chapter: '[CHAPTER 03 // BATTLE RECORD & TOOLKIT]', stamp: '★ LOADOUT', title: 'Timeline &', accent: 'arsenal matrix', intro: 'Project milestones and the tools I use for data, web, and application development.', log: 'Project milestones' },
+  loadout: { title: 'Loadout map', subtitle: 'What I built with what', projects: 'Projects', tools: 'Tools', empty: 'No tools tagged' },
   contact: { chapter: '[FINAL CHAPTER // TRANSMISSION]', stamp: '⚡ CLIMAX', title: 'What comes', accent: 'next?', badge: 'SEND A TRANSMISSION', intro: 'Got a machine learning problem, a web application to build, or a project you’d like to discuss? Send me an email.' },
 }
 

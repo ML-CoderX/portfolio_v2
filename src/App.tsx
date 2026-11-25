@@ -10,6 +10,7 @@ import { Work } from './work/Work'
 import { Icon } from './Icon'
 import { ChapterHeading } from './ChapterHeading'
 import { ContactActions } from './ContactActions'
+import { LoadoutMap } from './toolkit/LoadoutMap'
 
 function Hero() {
   const h = copy.hero
@@ -65,16 +66,18 @@ function About() {
   </div></Scene>
 }
 
-function Toolkit() {
+function Toolkit({ motion }: { motion: boolean }) {
   return <Scene id="toolkit" className="site-section toolkit-section"><div className="frame">
     <ChapterHeading chapter={copy.toolkit} id="toolkit-title" />
     <div className="toolkit-grid">
       <div className="timeline panel"><h3>{copy.toolkit.log}</h3><ol>{timeline.map(milestone => <li key={milestone.title}>
         <small>{milestone.badge}</small><h4>{milestone.title}</h4><p>{milestone.detail}</p><b>{milestone.note}</b>
       </li>)}</ol></div>
-      <div className="matrix">{toolkit.map(group => <section className="panel" key={group.name}>
+      <div className="matrix">{toolkit.map(group => <section className="skill-card panel" key={group.name}>
         <h3>{group.name}</h3><ul>{group.items.map(item => <li key={item}>{item}<div className="exp-track" aria-hidden="true"><span /></div></li>)}</ul>
-      </section>)}</div>
+      </section>)}
+        <LoadoutMap motion={motion} />
+      </div>
     </div>
   </div></Scene>
 }
@@ -107,7 +110,7 @@ export function App() {
     <Navigation effectsReady={sakuga.button} motion={motionEnabled} />
     <MotionSwitch enabled={motion} />
     <LinkEffects ready={sakuga.button} />
-    <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
+    <main id="main" tabIndex={-1}><Hero /><Work tooltips={sakuga.tooltip} /><About /><Toolkit motion={motionEnabled} /><Contact copyEffect={sakuga.button} toast={sakuga.toast} /></main>
     {motion && <WorkSequence />}
     <footer className="footer"><div className="frame"><p>{copy.footer}</p><nav aria-label={copy.contact.title}>{profile.socials.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}<a href={'mailto:' + profile.email}>{copy.email}</a></nav><a className="comic-action" href="#hero"><Icon name="arrow_upward" />{copy.top}</a></div></footer>
   </>

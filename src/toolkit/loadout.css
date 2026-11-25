@@ -1,0 +1,99 @@
+.loadout.panel {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 12px;
+}
+.loadout .loadout-header h3 {
+  border: var(--rule);
+  padding: 5px 10px;
+  font: 700 12px/1.35 var(--mono);
+  row-gap: 3px;
+}
+.loadout .loadout-header b { display: inline; }
+.loadout-graph { display: none; }
+.loadout-list { display: grid; gap: 10px; }
+.loadout-list > li { padding-block: 9px; border-top: 1px solid var(--screen-dot); }
+.loadout-list strong { display: block; font-size: 14px; }
+.loadout-list p { font-size: 13px; margin-top: 4px; }
+.loadout-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+
+@media (min-width: 1024px) {
+  .toolkit-grid { align-items: stretch; }
+  .toolkit-grid > .matrix { grid-template-rows: auto auto minmax(min-content, 1fr); }
+  .loadout.panel { display: flex; flex-direction: column; }
+  .loadout-list {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .loadout-graph {
+    --loadout-muted-type: #5f5869;
+    --loadout-muted-border: #a39bad;
+    display: flex; flex: 1; flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: radial-gradient(var(--screen-dot) .75px, transparent 1px) 0 0 / 8px 8px var(--panel-tint);
+    border: 2px solid var(--ink);
+  }
+  [data-theme="night"] .loadout-graph {
+    --loadout-muted-type: #b5abc3;
+    --loadout-muted-border: #83788d;
+  }
+  .loadout-columns {
+    display: grid; grid-template-columns: 37.5% 1fr 26.5%;
+    font: 700 12px/1.25 var(--mono);
+    text-transform: uppercase; color: var(--violet-type);
+  }
+  .loadout-columns > :last-child { grid-column: 3; }
+  .loadout-network { position: relative; flex: 1; min-height: calc(var(--loadout-rows) * 27px + 10px); }
+  .loadout-wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .loadout-wire { color: var(--violet); transition: opacity .15s ease; }
+  .loadout-wire.pink { color: var(--pink); }
+  .loadout-wire[data-muted] { opacity: .19; }
+  .loadout-wire path { fill: none; vector-effect: non-scaling-stroke; }
+  .loadout-wires[data-measured] path { vector-effect: none; }
+  .loadout-line { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
+  .loadout-pulse {
+    display: none;
+    stroke: var(--reading-ink);
+    stroke-width: 5; stroke-linecap: round;
+    stroke-dasharray: .002 1;
+    animation: loadout-travel 4.6s linear infinite paused;
+  }
+  .loadout-wire:nth-child(3n + 2) .loadout-pulse { animation-delay: -.8s; }
+  .loadout-wire:nth-child(3n) .loadout-pulse { animation-delay: -1.6s; }
+  [data-motion="on"] .loadout[data-loadout-pulses] .loadout-pulse { display: inline; }
+  .loadout[data-loadout-running] .loadout-pulse { animation-play-state: running; }
+  @keyframes loadout-travel {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -1.002; }
+  }
+  .loadout-node {
+    position: absolute;
+    translate: 0 -50%;
+    min-width: 0;
+    font: 700 12px/1.25 var(--mono);
+  }
+  .loadout-node[data-loadout-node="project"] { left: 0; width: 37.5%; }
+  .loadout-node[data-loadout-node="tool"] { right: 0; width: 26.5%; }
+  .loadout-node-label {
+    display: block; padding: 3px 5px;
+    color: var(--reading-ink); background: var(--white); border: 2px solid var(--ink);
+    transition: color .15s ease, background-color .15s ease, border-color .15s ease;
+    overflow-wrap: anywhere;
+  }
+  [data-loadout-node="project"] .loadout-node-label { padding: 6px 7px; box-shadow: 2px 2px var(--ink); }
+  [data-loadout-node="tool"] .loadout-node-label { background: var(--lavender); }
+  .loadout-node[data-muted] .loadout-node-label {
+    color: var(--loadout-muted-type);
+    background: var(--panel-tint); border-color: var(--loadout-muted-border);
+  }
+  .loadout-node[data-selected] { z-index: 1; }
+  .loadout-node[data-selected] .loadout-node-label { color: var(--ink); background: var(--yellow); }
+  .loadout-node:focus-visible .loadout-node-label { opacity: 1 !important; visibility: visible !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadout .loadout-pulse { animation: none; visibility: hidden; }
+  .loadout-wire, .loadout-node-label { transition: none; }
+}

@@ -3,7 +3,7 @@ import { build } from 'vite'
 import sharp from 'sharp'
 
 await build()
-await build({ build: { ssr: 'src/prerender.tsx', outDir: '.ssr', emptyOutDir: true } })
+await build({ build: { ssr: 'src/prerender.tsx', outDir: '.ssr', emptyOutDir: true, copyPublicDir: false } })
 const { render, copy, profile } = await import('../.ssr/prerender.js')
 const dst = new URL('../dist/', import.meta.url)
 const path = file => new URL(file, dst)
@@ -16,7 +16,8 @@ const socialImage = { file: 'og.png', width: 1200, height: 630 }
 const image = new URL(socialImage.file, profile.url).href
 const person = {
   '@type': 'Person', '@id': profile.url + '#person', name: profile.name,
-  url: profile.url, jobTitle: profile.role, sameAs: profile.socials.map(link => link.href),
+  url: profile.url, jobTitle: profile.employment.role, sameAs: profile.socials.map(link => link.href),
+  ...(profile.employment.company && { worksFor: { '@type': 'Organization', name: profile.employment.company } }),
 }
 const schema = {
   '@context': 'https://schema.org', '@type': 'ProfilePage',

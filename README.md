@@ -38,7 +38,7 @@ The Hero and Work share one lazy React Three Fiber canvas. The closed laptop ope
 - The floating **Motion** switch saves `saad-motion`. A first visit follows the device’s reduced-motion setting. With motion off, visitors get the closed laptop poster, static Work grid, and still eye and curtain artwork. The Work grid also serves as the WebGL fallback.
 - The header **Day/Night** switch saves `saad-theme`. Changing theme updates the active laptop’s lighting and screen glow. With JavaScript disabled, the prerendered chapters, project links, native dossier disclosures, résumé and email link remain available.
 - [src/SceneShots.tsx](src/SceneShots.tsx) handles the About eyes and Contact curtain. [src/opening-screen.ts](src/opening-screen.ts) enhances the native loading meter. Tab or Escape dismisses the opening screen.
-- The [Sakuga VFX components](https://github.com/finktheartist/sakuga-vfx) are vendored under [public/sakuga-vfx/](public/sakuga-vfx/) with their MIT license. Local integration lazy-loads components and shares effects with the 3D canvas. Preserve those changes when updating the vendor files. [AGENTS.md](AGENTS.md) lists the animation references used for development.
+- The [Sakuga VFX components](https://github.com/finktheartist/sakuga-vfx) are vendored under [public/sakuga-vfx/](public/sakuga-vfx/) with their MIT license. The loader initializes `button.js` first because it owns the shared effects engine and canvas integration. When updating the other four scripts, omit their generated `sakuga core` blocks and retain their component code and artwork. [AGENTS.md](AGENTS.md) lists the animation references used for development.
 
 ## Verify the production build
 

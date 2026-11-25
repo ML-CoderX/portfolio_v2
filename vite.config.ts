@@ -9,29 +9,30 @@ import sharp from 'sharp'
 
 function sceneArt(): Plugin {
   const cache = fileURLToPath(new URL('./.scene-art/', import.meta.url))
+  const artRequest = /^(.*\.webp)\?width=(\d+)&scene-art$/
   return {
     name: 'portfolio-scene-art',
     enforce: 'pre',
-    async load(id) {
-      const match = /^(.*\.webp)\?width=(\d+)&scene-art$/.exec(id)
-      if (!match) return
-
-      const [, source, width] = match
-      this.addWatchFile(source)
-      const input = await readFile(source)
-      const digest = createHash('sha256').update(input).digest('hex').slice(0, 16)
-      const key = `w${width}-q84-${digest}`
-      const name = basename(source)
-      const directory = resolve(cache, key)
-      const output = resolve(directory, name)
-      if (!existsSync(output)) {
-        await mkdir(directory, { recursive: true })
-        const pending = resolve(directory, randomUUID() + '.webp')
-        await sharp(input).resize({ width: Number(width), withoutEnlargement: true }).webp({ quality: 84 }).toFile(pending)
-        await rename(pending, output)
-      }
-      // Let Vite resolve the same public URL in both the client and server builds.
-      return `export { default } from ${JSON.stringify('/.scene-art/' + key + '/' + name + '?url')}`
+    load: {
+      filter: { id: artRequest },
+      async handler(id) {
+        const [, source, width] = artRequest.exec(id)!
+        this.addWatchFile(source)
+        const input = await readFile(source)
+        const digest = createHash('sha256').update(input).digest('hex').slice(0, 16)
+        const key = `w${width}-q84-${digest}`
+        const name = basename(source)
+        const directory = resolve(cache, key)
+        const output = resolve(directory, name)
+        if (!existsSync(output)) {
+          await mkdir(directory, { recursive: true })
+          const pending = resolve(directory, randomUUID() + '.webp')
+          await sharp(input).resize({ width: Number(width), withoutEnlargement: true }).webp({ quality: 84 }).toFile(pending)
+          await rename(pending, output)
+        }
+        // Let Vite resolve the same public URL in both the client and server builds.
+        return `export { default } from ${JSON.stringify('/.scene-art/' + key + '/' + name + '?url')}`
+      },
     },
   }
 }

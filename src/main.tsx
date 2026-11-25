@@ -1,6 +1,4 @@
 import { createRoot, hydrateRoot } from 'react-dom/client'
-import '@fontsource-variable/plus-jakarta-sans'
-import '@fontsource/space-mono/latin.css'
 import './style.css'
 import { App } from './App'
 

@@ -19,6 +19,12 @@ export const profile = {
   first: 'Saad',
   last: 'AR',
   role: 'Machine Learning & Web Developer',
+  employment: {
+    role: 'Web Developer (Part-time)',
+    company: 'Intellex.web',
+    dates: 'Nov 2026 – Present',
+    description: 'Building websites for clients.',
+  },
   url: 'https://saadar.dev/',
   email: 'rsaadt3@gmail.com',
   resume: '/Saad_Resume.pdf',
@@ -127,6 +133,12 @@ export const projects: readonly Project[] = [
 ]
 
 export const timeline = [
+  {
+    badge: profile.employment.dates,
+    title: `${profile.employment.role} at ${profile.employment.company}`,
+    detail: profile.employment.description,
+    note: 'CURRENT',
+  },
   { badge: 'SMART INDIA HACKATHON 2026', title: 'Digital Safety Hub shortlisted', detail: 'Built a scam-detection platform with a reporting and recovery flow.', note: 'NEXT.JS + TYPESCRIPT' },
   { badge: 'COLLEGE HACKATHON', title: 'Won first place with Agro AI', detail: 'Built a farmer-facing tool for crop health, growing advice, and live mandi prices.', note: 'FIRST PLACE' },
   { badge: 'MOBILE DEVELOPMENT', title: 'Built Cashlio', detail: 'Developed a personal finance app with separate profiles, spending charts, and PDF reports.', note: 'ANGULAR + IONIC' },

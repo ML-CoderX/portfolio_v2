@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Plus Jakarta Sans Variable';
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/space-mono/files/space-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/space-mono/files/space-mono-latin-700-normal.woff2') format('woff2');
+}
+
 :root {
   --paper: #f6f3ec; --ink: #0b0b12; --pink: #ff2e88; --violet: #6c4bff; --yellow: #fde400;
   --lavender: #eee9ff; --pink-paper: #ffd9e1; --white: #fff;

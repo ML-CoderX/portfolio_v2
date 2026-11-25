@@ -67,11 +67,34 @@ async function verifyScrollOverLaptop(browser) {
   }
 }
 
+async function verifyEyeScroll(page) {
+  async function seek(progress, direction) {
+    await page.locator('[data-chapter-shot="eyes"]').evaluate((panel, fraction) => {
+      const header = document.querySelector('.site-header')
+      const { top, height } = panel.getBoundingClientRect()
+      const start = scrollY + top - innerHeight * .9
+      const end = scrollY + top + height - header.offsetHeight
+      scrollTo({ top: start + (end - start) * fraction, behavior: 'instant' })
+    }, progress)
+    await page.waitForFunction(sign => [...document.querySelectorAll('[data-eye-gaze]')].every(eye =>
+      new DOMMatrixReadOnly(eye.getAttribute('transform') || undefined).m41 * sign > 15), direction)
+  }
+
+  await seek(.34, -1)
+  await seek(.69, 1)
+  await seek(.34, -1)
+  await page.waitForTimeout(200)
+  const gaze = await page.locator('[data-eye-gaze]').first().evaluate(eye =>
+    new DOMMatrixReadOnly(eye.getAttribute('transform') || undefined).m41)
+  assert.ok(gaze < -15, 'The eyes must hold their position when the page stops')
+}
+
 async function verifyScenes(page) {
   await page.locator('.hero a[href="#work"]').first().click()
   await page.waitForFunction(() => location.hash === '#work' && Math.abs(document.getElementById('work').getBoundingClientRect().top - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)) < 3).catch(async error => { throw new Error('Work anchor ' + JSON.stringify(await page.evaluate(() => [location.hash,scrollY,document.getElementById('work').getBoundingClientRect().top,getComputedStyle(document.documentElement).scrollPaddingTop])), { cause: error }) })
   for (const index of [0, 1, 2, 3, 4, 3, 2, 1, 0]) await selectBeat(page, index)
   assert.equal(await page.locator('.studio-final a').getAttribute('href'), 'https://github.com/ML-CoderX')
+  await verifyEyeScroll(page)
   await page.locator('.r3f-layer canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })))
   await page.waitForFunction(() => !document.documentElement.hasAttribute('data-studio'))
   assert.equal(await page.locator('#work article:not([inert])').count(), 4)
@@ -213,6 +236,7 @@ async function fallbacks(browser) {
   await reduced.locator('.closed-fallback').waitFor()
   assert.equal(await reduced.locator('canvas').count(), 0)
   await reduced.locator('#about .about-eyes img').waitFor({ state: 'visible' })
+  assert.equal(await reduced.locator('.eye-gaze-overlay').isVisible(), false)
   await reduced.locator('#contact .contact-stage').waitFor({ state: 'visible' })
   assert.ok(!requests.some(url => url.includes('/sakuga-vfx/') || url.includes('/Workstation-')))
   await reduced.getByRole('switch', { name: 'Night mode' }).click()

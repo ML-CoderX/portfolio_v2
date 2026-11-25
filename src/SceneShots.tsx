@@ -1,20 +1,21 @@
 import { useEffect } from 'react'
 import { sceneArt } from './scene-art'
 
-export function useChapterReveals(enabled: boolean) {
+export function useContactCurtain(enabled: boolean) {
   useEffect(() => {
     if (!enabled || typeof IntersectionObserver === 'undefined') return
-    const shots = document.querySelectorAll<HTMLElement>('[data-chapter-shot]')
+    const curtain = document.querySelector('[data-chapter-shot="curtains"]')
+    if (!curtain) return
     const observer = new IntersectionObserver(entries => {
       for (const { target, isIntersecting } of entries) {
         target.toggleAttribute('data-chapter-playing', isIntersecting)
       }
     }, { rootMargin: '0px 0px -78px 0px' })
 
-    for (const shot of shots) observer.observe(shot)
+    observer.observe(curtain)
     return () => {
       observer.disconnect()
-      for (const shot of shots) shot.removeAttribute('data-chapter-playing')
+      curtain.removeAttribute('data-chapter-playing')
     }
   }, [enabled])
 }

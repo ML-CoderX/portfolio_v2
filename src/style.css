@@ -188,17 +188,7 @@ p { line-height: 1.62; }
 }
 .eye-art img { display: block; width: 100%; height: auto; }
 .eye-gaze-overlay { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
-[data-motion="on"] [data-chapter-playing] .eye-gaze-overlay { animation: gaze-overlay 1.65s both; }
-[data-motion="on"] [data-chapter-playing] [data-eye-gaze] { animation: gaze-scan 1.65s both; }
-@keyframes gaze-overlay {
-  0%, 100% { opacity: 0; }
-  8%, 90% { opacity: 1; }
-}
-@keyframes gaze-scan {
-  0%, 8%, 82%, 100% { transform: translateX(0); }
-  20%, 38% { transform: translateX(-17px); }
-  56%, 71% { transform: translateX(17px); }
-}
+[data-motion="off"] .eye-gaze-overlay { visibility: hidden; }
 @media (max-width: 767px) {
   .contact-stage { object-fit: fill; }
 }

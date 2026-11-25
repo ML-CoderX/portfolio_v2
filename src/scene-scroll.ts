@@ -1,8 +1,27 @@
+import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { startNativeScroll } from './native-scroll'
 import { copy, projects } from './content'
 import { sceneChapters, type SceneId } from './scenes'
 import { progressForSlide, restoreProjectEvent, slideAtProgress, type StudioPlayback } from './work/playback'
+
+function startEyeScroll(header: HTMLElement) {
+  const panel = document.querySelector('[data-chapter-shot="eyes"]')
+  if (!panel) return
+  return gsap.context(() => {
+    gsap.timeline({ scrollTrigger: {
+      trigger: panel,
+      start: 'top 90%',
+      end: () => `bottom ${header.offsetHeight}px`,
+      scrub: true,
+    } })
+      .to('.eye-gaze-overlay', { opacity: 1, duration: .14 }, 0)
+      .to('[data-eye-gaze]', { x: -17, duration: .18, ease: 'sine.inOut' }, .12)
+      .to('[data-eye-gaze]', { x: 17, duration: .22, ease: 'sine.inOut' }, .42)
+      .to('[data-eye-gaze]', { x: 0, duration: .16, ease: 'sine.inOut' }, .75)
+      .to('.eye-gaze-overlay', { opacity: 0, duration: .09 }, .91)
+  }, panel)
+}
 
 export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   const root = document.documentElement
@@ -30,6 +49,7 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
   }
 
   const scroll = startNativeScroll()
+  const eyeScroll = startEyeScroll(header)
   let beat = -2
   let readFraction = 0
   let chapter: SceneId | undefined
@@ -118,6 +138,7 @@ export function startSceneScroll(enhanced: boolean, playback: StudioPlayback) {
     const project = section === work && sectionTop <= header.offsetHeight && beat >= 0
       ? cards[Math.min(beat, projects.length - 1)] : undefined
     trigger?.kill()
+    eyeScroll?.revert()
     screenResize?.disconnect()
     scroll.dispose()
     stage.removeEventListener('click', select)

@@ -1,7 +1,7 @@
 import { copy, profile, timeline, toolkit } from './content'
 import { ActionLink, LinkEffects, useSakuga } from './sakuga'
 import { Scene, WorkSequence } from './Scene'
-import { ChapterShot, useChapterReveals } from './SceneShots'
+import { ChapterShot, useContactCurtain } from './SceneShots'
 import { sceneArt } from './scene-art'
 import { Navigation } from './Navigation'
 import { MotionSwitch, useMotionPreference } from './MotionSwitch'
@@ -100,7 +100,7 @@ export function App() {
   const motion = useMotionPreference()
   const motionEnabled = motion === true
   useOpeningScreen(motionEnabled)
-  useChapterReveals(motionEnabled)
+  useContactCurtain(motionEnabled)
   const sakuga = useSakuga(motionEnabled)
 
   return <>

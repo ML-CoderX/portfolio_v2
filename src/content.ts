@@ -95,10 +95,10 @@ export const projects: readonly Project[] = [
     title: 'Agro AI Advisory Platform',
     description: 'A platform for farmers that detects crop diseases, gives advice based on soil and weather, and looks up live mandi prices.',
     preview: ['Crop disease detection', 'Soil and weather advice', 'Mandi prices'],
-    stack: [],
+    stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'TensorFlow.js', 'Gemini', 'Scikit-learn', 'Python'],
     repo: 'https://github.com/ML-CoderX/agro_ai',
     span: 'lg:col-span-5',
-    // TODO: Add a verified stack or live demo.
+    // TODO: Add a verified live demo.
   },
   {
     id: 'cashlio', index: 'PAGE 03 // FINTECH', badge: 'MOBILE APPLICATION',

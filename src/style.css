@@ -156,16 +156,32 @@ p { line-height: 1.62; }
 [aria-checked="true"] .theme-toggle-fallback::after { translate: 16px 0; }
 .theme-toggle-art { position: absolute; left: 0; top: 50%; transform: translateY(-50%) scale(.42); transform-origin: left center; }
 .theme-toggle-art sakuga-toggle { display: block; margin: 0; }
-.theme-sweep {
-  position: fixed; z-index: 10; inset: 0; opacity: 0; pointer-events: none;
-  background: repeating-linear-gradient(171deg, transparent 0 47px, var(--pink) 48px 51px, transparent 52px 68px, var(--violet-type) 69px 72px);
-  clip-path: polygon(0 35%, 100% 0, 81% 49%, 4% 81%);
+::view-transition { pointer-events: none; }
+::view-transition-old(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  mask-image: url('./assets/theme-splash.svg'), radial-gradient(ellipse, black 65%, transparent 72%), radial-gradient(ellipse, black 65%, transparent 72%), radial-gradient(ellipse, black 65%, transparent 72%);
+  mask-repeat: no-repeat;
+  animation: manga-splash 550ms cubic-bezier(.45,.05,.28,1) both;
 }
-:root[data-motion="on"]::view-transition-old(root) { animation: none; }
-:root[data-motion="on"]::view-transition-new(root) { animation: manga-theme-wipe .38s cubic-bezier(.23,1,.32,1) both; mix-blend-mode: normal; }
-@keyframes manga-theme-wipe {
-  from { clip-path: circle(0 at var(--theme-x, 50%) var(--theme-y, 0%)); }
-  to { clip-path: circle(150vmax at var(--theme-x, 50%) var(--theme-y, 0%)); }
+@keyframes manga-splash {
+  from {
+    mask-size: 0 0, 0 0, 0 0, 0 0;
+    mask-position: var(--theme-x) var(--theme-y);
+  }
+  32% {
+    mask-size: calc(var(--ink-size) * .16) calc(var(--ink-size) * .16), 24px 15px, 11px 17px, 9px 8px;
+    mask-position: calc(var(--theme-x) - var(--ink-size) * .08) calc(var(--theme-y) - var(--ink-size) * .08),
+      calc(var(--theme-x) - 19vw) calc(var(--theme-y) + 8vh), calc(var(--theme-x) - 9vw) calc(var(--theme-y) + 26vh), calc(var(--theme-x) - 23vw) calc(var(--theme-y) + 5vh);
+  }
+  to {
+    mask-size: var(--ink-size) var(--ink-size), 26px 16px, 12px 19px, 10px 9px;
+    mask-position: calc(var(--theme-x) - var(--ink-size) * .5) calc(var(--theme-y) - var(--ink-size) * .5),
+      calc(var(--theme-x) - 21vw) calc(var(--theme-y) + 9vh), calc(var(--theme-x) - 10vw) calc(var(--theme-y) + 28vh), calc(var(--theme-x) - 25vw) calc(var(--theme-y) + 6vh);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) { animation: none; mask-image: none; }
 }
 .hero { position: relative; overflow: clip; border-bottom: var(--rule); padding-block: clamp(48px, 5vw, 76px); }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: center; gap: clamp(24px, 4vw, 64px); }

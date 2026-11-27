@@ -17,8 +17,6 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
   const [night, setNight] = useState(false)
   const [painted, setPainted] = useState(false)
   const toggle = useRef<SakugaToggle>(null)
-  const sweep = useRef<HTMLSpanElement>(null)
-  const animation = useRef<Animation | null>(null)
   const transition = useRef<ViewTransition | null>(null)
   const choice = useRef(false)
 
@@ -34,7 +32,6 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
     window.addEventListener('storage', sync)
     return () => {
       window.removeEventListener('storage', sync)
-      animation.current?.cancel()
       transition.current?.skipTransition()
     }
   }, [])
@@ -53,7 +50,6 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
 
   useEffect(() => {
     if (motion) return
-    animation.current?.cancel()
     transition.current?.skipTransition()
   }, [motion])
 
@@ -63,19 +59,23 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
     setNight(next)
     const storageKey = themeMeta()?.dataset.storageKey
     try { if (storageKey) localStorage.setItem(storageKey, next ? 'night' : 'day') } catch { /* Theme still works for this page. */ }
-    animation.current?.cancel()
     transition.current?.skipTransition()
-    if (!motion) {
+    if (!motion || matchMedia('(prefers-reduced-motion: reduce)').matches) {
       applyTheme(next)
       return
     }
 
     toggle.current?.flip()
-    if (document.startViewTransition && document.visibilityState === 'visible') {
+    if (document.startViewTransition && CSS.supports('mask-image', 'url("")') && document.visibilityState === 'visible') {
       const rect = button.getBoundingClientRect()
       const root = document.documentElement
-      root.style.setProperty('--theme-x', `${rect.left + rect.width / 2}px`)
-      root.style.setProperty('--theme-y', `${rect.top + rect.height / 2}px`)
+      const x = rect.left + rect.width / 2
+      const y = rect.top + rect.height / 2
+      const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+      root.style.setProperty('--theme-x', `${x}px`)
+      root.style.setProperty('--theme-y', `${y}px`)
+      // The solid center of the splash covers the middle half of its SVG.
+      root.style.setProperty('--ink-size', `${Math.ceil(radius * 4 + 8)}px`)
       const current = document.startViewTransition(() => applyTheme(choice.current))
       transition.current = current
       void current.finished.catch(() => {}).finally(() => {
@@ -84,15 +84,9 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
     } else {
       applyTheme(next)
     }
-    animation.current = sweep.current?.animate([
-      { opacity: 0, transform: 'translateX(-110%)' },
-      { opacity: .43, offset: .42 },
-      { opacity: 0, transform: 'translateX(110%)' },
-    ], { duration: 380, easing: 'cubic-bezier(.23,1,.32,1)' }) ?? null
   }
 
-  return <>
-    <button className="theme-switch" type="button" role="switch" aria-label={copy.theme.label}
+  return <button className="theme-switch" type="button" role="switch" aria-label={copy.theme.label}
       aria-checked={night} title={night ? copy.theme.night : copy.theme.day}
       onClick={event => flip(event.currentTarget)}>
       <span className="theme-icon" aria-hidden="true">{night ? '☾' : '☀'}</span>
@@ -102,6 +96,4 @@ export function ThemeSwitch({ effectsReady, motion }: { effectsReady: boolean; m
           : <span className="theme-toggle-fallback" />}
       </span>
     </button>
-    <span ref={sweep} className="theme-sweep" aria-hidden="true" />
-  </>
 }

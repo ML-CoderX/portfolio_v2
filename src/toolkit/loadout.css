@@ -53,6 +53,7 @@
   .loadout-wire path { fill: none; vector-effect: non-scaling-stroke; }
   .loadout-wires[data-measured] path { vector-effect: none; }
   .loadout-line { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
+  .loadout-trace { stroke: var(--reading-ink); stroke-width: 1; opacity: 0; }
   .loadout-pulse {
     display: none;
     stroke: var(--reading-ink);

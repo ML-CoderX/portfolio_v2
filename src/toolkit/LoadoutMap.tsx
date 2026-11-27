@@ -102,6 +102,7 @@ export function LoadoutMap({ motion }: { motion: boolean }) {
             return <g key={`${edge.project}-${edge.tool}`} className={edge.pink ? 'loadout-wire pink' : 'loadout-wire'}
               data-muted={links ? !links.includes(edge) || undefined : undefined}>
               <path className="loadout-line" d={path} pathLength="1" />
+              <path className="loadout-trace" d={path} pathLength="1" />
               <path className="loadout-pulse" d={path} pathLength="1" />
             </g>
           })}

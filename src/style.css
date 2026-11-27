@@ -463,7 +463,10 @@ dialog h3, .dossier-disclosure h4 { font-size: 33px; }
   position: absolute; inset: -8%;
   background: url('/laptop-closed-day.webp') center / contain no-repeat;
 }
-[data-theme="night"] .closed-fallback { background-image: url('/laptop-closed-night.webp'); }
+[data-theme="night"] .closed-fallback {
+  background-image: url('/laptop-closed-night.webp');
+  filter: brightness(1.5) drop-shadow(0 -1px 1px #afbcdf99);
+}
 [data-studio] .closed-fallback { visibility: hidden; }
 [data-studio] .work-section { height: 600vh; padding: 0; background: radial-gradient(ellipse at center,#fff,var(--paper)); }
 [data-theme="night"][data-studio] .work-section { background: radial-gradient(ellipse at center,#312538,#15121c); }

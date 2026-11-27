@@ -7,23 +7,22 @@ export function animateLoadout(panel: HTMLElement, played: { current: boolean })
   let complete = played.current
   let intro: gsap.core.Timeline | undefined
   const nodes = panel.querySelectorAll('.loadout-node-label')
-  const lines = panel.querySelectorAll('.loadout-line')
+  const traces = panel.querySelectorAll('.loadout-trace')
 
   function begin() {
     if (played.current || intro) return
     played.current = true
-    gsap.set(lines, { strokeDasharray: '1 1', strokeDashoffset: 1 })
     intro = gsap.timeline({
       paused: true,
       onComplete: () => {
         complete = true
-        gsap.set(nodes, { clearProps: 'opacity,visibility,transform' })
-        gsap.set(lines, { clearProps: 'strokeDasharray,strokeDashoffset' })
         sync()
       },
     })
-      .fromTo(nodes, { autoAlpha: 0, scale: .84 }, { autoAlpha: 1, scale: 1, duration: .32, stagger: .026, ease: 'back.out(1.6)' })
-      .to(lines, { strokeDashoffset: 0, duration: .58, stagger: .022, ease: 'power2.out' }, .25)
+      .fromTo(nodes, { scale: .94 }, { scale: 1, duration: .32, stagger: .026, ease: 'back.out(1.6)' })
+      .fromTo(traces, { strokeDasharray: '1 1', strokeDashoffset: 1, opacity: .65 },
+        { strokeDashoffset: 0, duration: .58, stagger: .022, ease: 'power2.out' }, .25)
+      .to(traces, { opacity: 0, duration: .2 })
     sync()
   }
 
@@ -38,10 +37,9 @@ export function animateLoadout(panel: HTMLElement, played: { current: boolean })
     }
   }
 
-  const context = gsap.context(() => undefined, panel)
   const trigger = !complete && ScrollTrigger.create({
     trigger: panel,
-    start: 'top 70%',
+    start: () => `top+=${Math.min(panel.offsetHeight, innerHeight) * .3} bottom`,
     once: true,
     onEnter: begin,
   })
@@ -57,7 +55,7 @@ export function animateLoadout(panel: HTMLElement, played: { current: boolean })
 
   return () => {
     if (trigger) trigger.kill()
-    context.revert()
+    intro?.revert()
     visibility.disconnect()
     document.removeEventListener('visibilitychange', sync)
     panel.removeAttribute('data-loadout-pulses')

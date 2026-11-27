@@ -30,6 +30,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
   const hinge = useRef<Group>(null!)
   const display = useRef<MeshStandardMaterial>(null!)
   const key = useRef<DirectionalLight>(null!)
+  const rim = useRef<DirectionalLight>(null!)
   const spill = useRef<PointLight>(null!)
   const shadow = useRef<Mesh>(null!)
   const overlay = useRef<Sprite>(null!)
@@ -116,8 +117,9 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
     const night = document.documentElement.dataset.theme === 'night' ? 1 : 0
     theme.current = MathUtils.damp(theme.current, night, 6, dt)
     const n = theme.current
-    scene.environmentIntensity = mix(1.45,.7,n)
-    key.current.intensity = mix(3,1.45,n)
+    scene.environmentIntensity = mix(1.45,1.9,n)
+    key.current.intensity = mix(3,4.6,n)
+    rim.current.intensity = mix(1.8,6.5,n)
     spill.current.intensity = open * mix(.3,5,n)
     display.current.emissive.copy(screenGlow.day).lerp(screenGlow.night,n)
     display.current.emissiveIntensity = open * mix(.5,1.6,n)
@@ -164,7 +166,7 @@ function Laptop({ playback, onPaint, onFailure }: Props) {
   return <>
     <ambientLight intensity={.48} />
     <directionalLight ref={key} position={[-3,5,4]} />
-    <directionalLight position={[4,2,-2]} intensity={1.8} color="#ced7ff" />
+    <directionalLight ref={rim} position={[4,2,-2]} intensity={1.8} color="#ced7ff" />
     <group ref={root}>
       <mesh ref={shadow} position={[0,-.24,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[5.8,4.4]} /><meshBasicMaterial transparent map={shadowMap} depthWrite={false} /></mesh>
       <RoundedBox args={[4.13,.105,2.61]} position={[0,-.075,-.015]} radius={.049} smoothness={3}>
